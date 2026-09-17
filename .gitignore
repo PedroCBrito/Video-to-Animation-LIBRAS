@@ -52,3 +52,6 @@ Thumbs.db
 desktop.ini
 .env
 *.log
+
+# Documentação de planejamento local por etapa
+/docs/step-planning/

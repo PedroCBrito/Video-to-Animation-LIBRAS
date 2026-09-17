@@ -1,138 +1,119 @@
-# Video-to-Animation LIBRAS: Acessibilidade 3D Open Source
+# Video-to-Animation LIBRAS
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python: 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/)
-[![FreeMoCap: pip](https://img.shields.io/badge/FreeMoCap-pip%20package-brightgreen.svg)](https://freemocap.org/)
-[![Blender: 3.6+ / 5.2+](https://img.shields.io/badge/Blender-3.6%2B%20%7C%205.2%2B-orange.svg)](https://www.blender.org/)
+[English](README_EN.md) · [Planejamento de desenvolvimento](docs/planning.md)
 
-[Read this README in English](README_EN.md)
+Pipeline offline para transformar uma pasta de vídeos de intérpretes sinalizando em LIBRAS em uma pasta de animações aplicadas a um personagem 3D. O dataset de referência é o **V-LIBRASIL**; o motor de extração é o **FreeMoCap**, e o retargeting e a exportação são feitos no **Blender**.
 
-O **Video-to-Animation LIBRAS** é uma iniciativa **Open Source (Código Aberto)** focada em **viabilizar a Língua Brasileira de Sinais (LIBRAS) para todos**. Através da combinação de visão computacional, captura de movimento sem marcadores (*markerless motion capture*) e computação gráfica 3D, o projeto permite converter vídeos 2D de pessoas sinalizando em animações 3D prontas para serem aplicadas em avatares virtuais.
+O objetivo é automatizar o fluxo que pode ser realizado manualmente: preparar o vídeo, extrair o movimento, gerar o esqueleto animado, transferir a animação ao rig do personagem e salvar os resultados. Cada vídeo representa um trabalho independente, com rastreabilidade até a origem.
 
----
+## Escopo inicial
 
-## Propósito e Impacto Social
+- Entrada: pasta local de vídeos, incluindo subpastas, com uma pessoa sinalizando por vídeo.
+- Prioridade: tronco, braços, punhos e dedos das duas mãos; cabeça conforme os dados disponíveis.
+- Um personagem de referência, com rig e mapeamento de ossos configurados uma vez quando definido. O material do usuário está em melhorias; nenhuma escolha de rig foi assumida.
+- Saída inicial: um arquivo `.blend` por vídeo aprovado tecnicamente, com personagem e Action baked, preview e relatório de qualidade.
+- Processamento sequencial, continuidade após falhas individuais e retomada de trabalhos compatíveis.
+- Expressões faciais detalhadas são uma melhoria posterior. O MVP será identificado como animação de corpo e mãos com face não validada.
 
-A comunidade surda no Brasil enfrenta barreiras diárias de acessibilidade na comunicação e no consumo de conteúdos digitais. A criação de animações 3D para LIBRAS tradicionalmente exige equipamentos caros de captura de movimento (como trajes sensoriais e estúdios dedicados) ou um trabalho manual exaustivo de animadores 3D.
+O escopo é transferir movimentos de vídeos já sinalizados para um avatar. Tradução de fala/texto para LIBRAS e composição automática de frases ficam fora desta primeira versão.
 
-**Nossa missão é democratizar esse processo:**
-- **Inclusão Digital:** Permitir que qualquer pessoa crie avatares 3D sinalizadores a partir de vídeos gravados por câmeras comuns ou celulares.
-- **LIBRAS para Todos:** Facilitar a tradução e geração de conteúdo em LIBRAS em escala para educação, sites, sistemas de atendimento e aplicativos.
-- **Tecnologia Livre & Código Aberto:** Toda a arquitetura, pipeline e scripts são totalmente abertos para a comunidade global de desenvolvedores, pesquisadores e ativistas de acessibilidade.
+## Fluxo proposto
 
----
+```mermaid
+flowchart TD
+    A["Pasta de vídeos"] --> B["Inventário e preparação FFmpeg"]
+    B --> C["FreeMoCap: rastreamento e tratamento"]
+    C --> D["Verificação da extração"]
+    D --> E["Blender: esqueleto animado de origem"]
+    E --> F["Retargeting e bake no personagem"]
+    F --> G["Validação da animação e exportação"]
+    G --> H["Pasta de animações e relatório do lote"]
+    D --> I["Revisão ou falha com diagnóstico"]
+    G --> I
+```
 
-## Tecnologias e Ferramentas Utilizadas
+O FreeMoCap fornece dados de movimento; a integração com Blender transforma esses dados no esqueleto animado de origem. O pipeline reaproveitará esse caminho antes de considerar um solver próprio.
 
-| Ferramenta / Biblioteca | Função no Projeto |
-| :--- | :--- |
-| **Python 3.12+** | Linguagem base para orquestração modular de todo o pipeline. |
-| **FreeMoCap (via pip)** | Motor de captura de movimento *markerless* integrado como biblioteca Python nativa. |
-| **MediaPipe / SkellyTracker** | Algoritmos de visão computacional para rastreamento de articulações do corpo, mãos e expressão facial em 2D. |
-| **SkellyForge** | Algoritmos de triangulação espacial 3D, filtro temporal de Butterworth e travamento de extremidades (*Foot & Hand Locking*). |
-| **Blender (Headless)** | Motor 3D invocado via linha de comando para retargeting de armadura, rig de personagem e exportação de animações. |
-| **FFmpeg** | Manipulação, preparação, corte e validação dos arquivos de vídeo. |
-| **PyYAML** | Gerenciamento centralizado de configurações e caminhos de executáveis. |
+Vídeos independentes de um mesmo sinal são trabalhos separados, não câmeras de uma captura multicâmera. A profundidade monocular é estimada: gerar um arquivo 3D não comprova precisão nem inteligibilidade em LIBRAS. A checagem automática identifica problemas técnicos; a validação de qualidade inclui comparação visual e uma amostra avaliada por pessoas fluentes em LIBRAS. [Documentação de captura monocular do FreeMoCap](https://docs.freemocap.org/documentation/single-camera-recording.html).
 
----
+## Estado atual
 
-## Arquitetura Resumida do Pipeline
+O projeto está na fase de revisão de arquitetura e definição dos checkpoints. O código existente contém uma CLI para um vídeo e a estrutura inicial dos módulos, mas o fluxo completo ainda não foi validado.
+
+A preparação atual verifica existência/extensão e copia o vídeo. Ainda faltam processamento em lote, normalização, integração corrigida com a versão instalada, avaliação de qualidade, mapeamento do personagem e exportação final validada. Os parâmetros de processamento recebidos pelo wrapper ainda não são aplicados.
+
+Os comandos futuros abaixo são **propostas de interface, ainda não implementadas**:
+
+```powershell
+python cli.py --input-dir "./dataset/videos" --output-dir "./output" --avatar "./assets/avatar.blend" --rig-map "./config/rig-map.yaml" --profile "./config/profiles/libras.yaml"
+python cli.py --input-dir "./dataset/videos" --output-dir "./output" --avatar "./assets/avatar.blend" --rig-map "./config/rig-map.yaml" --profile "./config/profiles/libras.yaml" --resume
+```
+
+A CLI atual aceita apenas `--video`/`-v`, `--output-dir`/`-o` e `--config`/`-c`. Seu uso é experimental e não garante uma conversão completa:
+
+```powershell
+python cli.py --help
+python cli.py --video "./video.mp4" --output-dir "./output"
+```
+
+## Ferramentas e ambiente
+
+| Componente | Responsabilidade |
+|---|---|
+| Python | Inventário, execução por vídeo, configuração, relatórios e retomada. |
+| FFprobe / FFmpeg | Inspeção, decodificação e preparação da mídia. |
+| FreeMoCap | Extração do movimento e pós-processamento conforme a versão selecionada. |
+| MediaPipe / SkellyTracker | Rastreamento utilizado pela integração FreeMoCap escolhida. |
+| SkellyForge / NumPy / SciPy | Tratamento e análise dos dados; SkellyForge não é o motor de triangulação. |
+| Blender + integração FreeMoCap | Esqueleto de origem, retargeting, bake e exportação. |
+
+A referência local inspecionada é FreeMoCap **1.8.2**, cujos metadados aceitam Python `>=3.10,<3.13`. Python **3.12** é o candidato inicial. A combinação de FreeMoCap, Blender e add-on para extração será fixada no CP0. O personagem e a animação de referência estão em melhorias e permanecem indefinidos; sua integração será validada no CP3. A versão do fluxo manual, quando identificada, orientará a escolha.
+
+O `requirements.txt` atual possui intervalos abertos e ainda não representa um ambiente reprodutível. Não há promessa de compatibilidade com qualquer Blender ou Python mais recente. As releases do FreeMoCap distinguem as linhas 1.x e 2.x; a migração será uma decisão explícita. [Releases oficiais](https://github.com/freemocap/freemocap/releases).
+
+Para preparar o ambiente de desenvolvimento candidato no Windows:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+FFmpeg/ffprobe e Blender são executáveis externos. Seus caminhos e versões serão verificados no preflight das etapas que os utilizam. O arquivo atual [config/config.yaml](config/config.yaml) é provisório; um caminho configurado não comprova integração validada.
+
+## Entrada, saída e confiabilidade
+
+A entrada será um diretório local obtido do [V-LIBRASIL / UFPE](https://libras.cin.ufpe.br/) ou de outra coleção compatível. O inventário verificará os arquivos realmente presentes, sem presumir quantidade, FPS ou organização de uma distribuição específica. Identificadores, glosas e intérpretes serão preservados quando houver metadados; nomes de arquivo não serão tratados automaticamente como rótulos confiáveis.
+
+Estrutura proposta de saída:
 
 ```text
-[ Vídeo 2D de LIBRAS (.mp4) ]
-             │
-             ▼
-[ 1. Ingestão & Validação (video_processor.py) ]
-             │
-             ▼
-[ 2. Rastreamento 2D & Reconstrução 3D (freemocap_wrapper.py) ]
-  ├── Detecção de poses e articulações corporais/mãos
-  ├── Triangulação de coordenadas X, Y, Z
-  └── Suavização por filtro Butterworth + Foot/Hand Locking
-             │
-             ▼
-[ 3. Automação Headless no Blender (blender_exporter.py) ]
-  ├── Importação de pontos e esqueleto anatômico
-  ├── Retargeting automático para o Avatar 3D
-  └── Exportação dos assets (.fbx, .gltf, .blend, .mp4)
-             │
-             ▼
-[ Animação 3D Final do Avatar em LIBRAS ]
+output/
+  animations/<clip-id>/<run-id>/animation.blend
+  animations/<clip-id>/<run-id>/preview.mp4
+  animations/<clip-id>/<run-id>/metadata.json
+  review/<clip-id>/<run-id>/
+  work/<clip-id>/<run-id>/
+  reports/batch-<batch-id>.json
 ```
 
----
+Trabalhos com suspeita de perda de mãos, troca de identidade, rotação incorreta ou retargeting inválido ficam separados para revisão. Falhas mantêm logs e motivos. A ausência de rosto animado será declarada no metadado, inclusive nos resultados tecnicamente aprovados.
 
-## Como Iniciar e Executar o Projeto
+A primeira entrega será `.blend`. FBX e GLB serão acrescentados após validar duração, esqueleto e deformação no consumidor escolhido. O arquivo final com personagem e Action baked é distinto de exportar somente um clip reutilizável: esse segundo contrato será definido com o consumidor.
 
-### 1. Pré-requisitos do Sistema
-Certifique-se de ter os seguintes programas instalados:
-- **Python 3.12 ou superior**
-- **Blender 3.6 LTS ou superior (ex: Blender 4.x / 5.2+)**
-- **FFmpeg**
+## Desenvolvimento por checkpoints
 
-> *Dica:* No Windows, você pode instalar o Blender e o FFmpeg rapidamente via WinGet:
-> ```powershell
-> winget install BlenderFoundation.Blender
-> winget install Gyan.FFmpeg
-> ```
+1. **CP0:** registrar a referência de extração manual até o esqueleto animado.
+2. **CP1:** inventariar a pasta e preparar vídeos compatíveis.
+3. **CP2:** automatizar FreeMoCap e gerar o esqueleto animado de um vídeo.
+4. **CP3:** mapear o rig e aplicar a animação no personagem.
+5. **CP4:** calibrar configurações e checagens de confiabilidade.
+6. **CP5:** executar lote com isolamento de falhas e retomada.
+7. **CP6:** validar entrega, consumidor e desempenho.
+8. **CP7, melhoria:** acrescentar animação facial.
 
-### 2. Criação do Ambiente Virtual e Instalação
-Recomenda-se criar um ambiente virtual dedicado com Python 3.12+:
+Cada checkpoint exige artefatos e verificações descritos no [plano](docs/planning.md). O detalhamento local fica em `docs/step-planning/`, ignorado pelo Git; o plano compartilhado permanece em `docs/planning.md`.
 
-```bash
-# Cria e ativa o ambiente virtual
-python -m venv .venv
-.venv\Scripts\activate
+## Licença
 
-# Atualiza o pip e instala as dependências
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-### 3. Configuração
-Verifique o arquivo `config/config.yaml` para garantir que o caminho do executável do Blender está correto no seu sistema:
-
-```yaml
-blender:
-  executable: "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe"
-  fallback_paths:
-    - "C:/Program Files/Blender Foundation/Blender 4.3/blender.exe"
-    - "C:/Program Files/Blender Foundation/Blender 4.2/blender.exe"
-    - "C:/Program Files/Blender Foundation/Blender 3.6/blender.exe"
-```
-
-### 4. Executando a Conversão
-Para converter um vídeo de sinais em uma animação 3D, basta executar o comando na CLI:
-
-```bash
-python cli.py --video "caminho/para/video_libras.mp4" --output-dir "./output"
-```
-
-#### Argumentos disponíveis na CLI:
-- `--video` / `-v`: **(Obrigatório)** Caminho para o vídeo de entrada (`.mp4`, `.mov`, `.avi`, `.mkv`).
-- `--output-dir` / `-o`: Diretório de saída para salvar a animação (Padrão: `./output`).
-- `--config` / `-c`: Caminho para um arquivo de configuração `.yaml` personalizado (Opcional).
-
-Para ver a ajuda completa da CLI:
-```bash
-python cli.py --help
-```
-
----
-
-## Contribuição e Open Source
-
-Este é um projeto **Open Source** licenciado sob a **MIT License**. Incentivamos a participação de todos os interessados em acelerar a acessibilidade digital!
-
-### Como você pode contribuir:
-- **Testando com novos vídeos em LIBRAS:** Enviando feedback sobre a precisão de sinais manuais e corporais.
-- **Aprimorando o Retargeting no Blender:** Criando novos modelos de avatares 3D compatíveis.
-- **Desenvolvendo melhorias de código:** Aumentando a performance de rastreamento 3D ou expandindo a CLI.
-
-Sinta-se à vontade para abrir **Issues**, enviar **Pull Requests** ou compartilhar sugestões de melhoria.
-
----
-
-<p align="center">
-  Desenvolvido para promover a acessibilidade e a inclusão da comunidade surda através da tecnologia livre.
-</p>
+O código deste repositório utiliza a [licença MIT](LICENSE). Dataset, modelos, dependências e personagem mantêm suas próprias licenças e condições de uso.

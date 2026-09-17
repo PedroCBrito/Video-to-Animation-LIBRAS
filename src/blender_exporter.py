@@ -7,8 +7,8 @@ from typing import Optional
 
 class BlenderExporter:
     """
-    Responsável por gerenciar a execução do Blender em modo headless (--background)
-    para converter os dados 3D do FreeMoCap em arquivos de animação (.blend, .fbx, .gltf, .mp4).
+    Manages headless execution of Blender (--background)
+    to convert FreeMoCap 3D coordinate trajectories into animation assets (.blend, .fbx, .gltf, .mp4).
     """
     def __init__(self, blender_executable: Path, custom_export_script: Optional[Path] = None):
         self.blender_executable = Path(blender_executable).resolve()
@@ -17,7 +17,7 @@ class BlenderExporter:
 
     def _resolve_site_packages(self) -> Path:
         """
-        Localiza o diretório site-packages do ambiente Python atual onde o freemocap está instalado.
+        Resolves the site-packages directory of the active Python environment where freemocap is installed.
         """
         try:
             import freemocap
@@ -30,7 +30,7 @@ class BlenderExporter:
 
     def _resolve_export_script(self, custom_script: Optional[Path]) -> Path:
         """
-        Localiza o script run_blender_export.py dentro do pacote freemocap instalado.
+        Locates the run_blender_export.py helper script within the installed freemocap package.
         """
         if custom_script and Path(custom_script).exists():
             return Path(custom_script).resolve()
@@ -43,7 +43,7 @@ class BlenderExporter:
         except (ImportError, ModuleNotFoundError):
             pass
 
-        # Fallback local para desenvolvimento ou caso exista cópia local
+        # Local fallback for development or local copy
         local_fallback = Path(__file__).parent.parent / "_internal" / "freemocap" / "core" / "blender" / "helpers" / "run_blender_export.py"
         if local_fallback.exists():
             return local_fallback.resolve()
@@ -52,15 +52,15 @@ class BlenderExporter:
 
     def export_animation(self, session_dir: Path, output_blend_path: Path) -> Path:
         """
-        Executa o Blender em segundo plano invocando run_blender_export.py.
+        Executes Blender in headless background mode by invoking run_blender_export.py.
         """
         if not self.blender_executable.exists():
-            raise FileNotFoundError(f"Executável do Blender não encontrado no caminho: {self.blender_executable}")
+            raise FileNotFoundError(f"Blender executable not found at: {self.blender_executable}")
 
         if not self.export_script.exists():
             raise FileNotFoundError(
-                f"Script de exportação do Blender não encontrado: {self.export_script}. "
-                "Certifique-se de que o pacote 'freemocap' está instalado no seu ambiente."
+                f"Blender export helper script not found: {self.export_script}. "
+                "Ensure that 'freemocap' is installed in your Python environment."
             )
 
         session_dir = Path(session_dir).resolve()
@@ -77,14 +77,14 @@ class BlenderExporter:
             str(output_blend_path)
         ]
 
-        print(f"[BlenderExporter] Invocando Blender em modo Headless...")
-        print(f"[BlenderExporter] Comando: {' '.join(cmd)}")
+        print(f"[BlenderExporter] Invoking Blender in headless background mode...")
+        print(f"[BlenderExporter] Command: {' '.join(cmd)}")
 
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             print(f"[BlenderExporter] STDOUT:\n{result.stdout}")
             print(f"[BlenderExporter] STDERR:\n{result.stderr}")
-            raise RuntimeError(f"O Blender finalizou com erro (código {result.returncode}).")
+            raise RuntimeError(f"Blender process exited with error code {result.returncode}.")
 
-        print(f"[BlenderExporter] Animação exportada com sucesso em: {output_blend_path}")
+        print(f"[BlenderExporter] Animation exported successfully to: {output_blend_path}")
         return output_blend_path
