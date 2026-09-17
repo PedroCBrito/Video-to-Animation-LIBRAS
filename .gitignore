@@ -1,0 +1,54 @@
+# Python & Virtual Environment
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+build/
+dist/
+*.egg-info/
+.eggs/
+*.spec
+
+# FreeMoCap Standalone Files (usando instalação via pip)
+_internal/
+*.exe
+
+# FreeMoCap Output & Session Data
+output/
+sessions/
+recording_sessions/
+freemocap_data/
+*.npy
+*.npz
+*.csv
+*.trc
+*.bvh
+
+# Blender Temporary Files & Generated 3D Assets
+*.blend1
+*.blend2
+*.blend@
+render_output/
+*.fbx
+*.gltf
+*.glb
+*.obj
+
+# Video & Media Files (Vídeos de entrada e saída)
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+
+# IDEs & System Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+.env
+*.log
