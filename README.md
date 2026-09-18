@@ -1,46 +1,51 @@
 # Video-to-Animation LIBRAS
 
-[English](README_EN.md) · [Planejamento de desenvolvimento](docs/planning.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python: 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/)
+[![FreeMoCap: pip](https://img.shields.io/badge/FreeMoCap-pip%20package-brightgreen.svg)](https://freemocap.org/)
+[![Blender: 3.6+ / 5.2+](https://img.shields.io/badge/Blender-3.6%2B%20%7C%205.2%2B-orange.svg)](https://www.blender.org/)
 
-Pipeline offline para transformar uma pasta de vídeos de intérpretes sinalizando em LIBRAS em uma pasta de animações aplicadas a um personagem 3D. O dataset de referência é o **V-LIBRASIL**; o motor de extração é o **FreeMoCap**, e o retargeting e a exportação são feitos no **Blender**.
+[Português](README.md)
 
-O objetivo é automatizar o fluxo que pode ser realizado manualmente: preparar o vídeo, extrair o movimento, gerar o esqueleto animado, transferir a animação ao rig do personagem e salvar os resultados. Cada vídeo representa um trabalho independente, com rastreabilidade até a origem.
+An offline batch pipeline that turns a folder of videos of people signing in Brazilian Sign Language (LIBRAS) into animations applied to a 3D character. **V-LIBRASIL** is the reference dataset, **FreeMoCap** extracts motion, and **Blender** handles the source skeleton, retargeting, baking and export.
 
-## Escopo inicial
+The goal is to automate an existing manual workflow, with each video processed as an independent job and every output traceable to its source.
 
-- Entrada: pasta local de vídeos, incluindo subpastas, com uma pessoa sinalizando por vídeo.
-- Prioridade: tronco, braços, punhos e dedos das duas mãos; cabeça conforme os dados disponíveis.
-- Um personagem de referência, com rig e mapeamento de ossos configurados uma vez quando definido. O material do usuário está em melhorias; nenhuma escolha de rig foi assumida.
-- Saída inicial: um arquivo `.blend` por vídeo aprovado tecnicamente, com personagem e Action baked, preview e relatório de qualidade.
-- Processamento sequencial, continuidade após falhas individuais e retomada de trabalhos compatíveis.
-- Expressões faciais detalhadas são uma melhoria posterior. O MVP será identificado como animação de corpo e mãos com face não validada.
+## Initial scope
 
-O escopo é transferir movimentos de vídeos já sinalizados para um avatar. Tradução de fala/texto para LIBRAS e composição automática de frases ficam fora desta primeira versão.
+- Local input folder, including subfolders; one signer and recording per video.
+- Torso, arms, wrists and fingers of both hands; head motion where supported.
+- One reference character and a reusable rig mapping, configured once.
+- Initial output: a `.blend` file with the character and baked Action, a preview and quality metadata for each technically accepted video.
+- Sequential processing, isolated failures and resumable jobs.
+- Detailed facial animation is a later enhancement. The MVP will explicitly report that facial animation is not validated.
 
-## Fluxo proposto
+The user's reference animation is undergoing improvements. The character, target rig and reference animation remain undecided; extraction through the source skeleton can proceed independently. Retargeting will be validated once that material is defined.
 
-```mermaid
-flowchart TD
-    A["Pasta de vídeos"] --> B["Inventário e preparação FFmpeg"]
-    B --> C["FreeMoCap: rastreamento e tratamento"]
-    C --> D["Verificação da extração"]
-    D --> E["Blender: esqueleto animado de origem"]
-    E --> F["Retargeting e bake no personagem"]
-    F --> G["Validação da animação e exportação"]
-    G --> H["Pasta de animações e relatório do lote"]
-    D --> I["Revisão ou falha com diagnóstico"]
-    G --> I
+This project transfers motion from already-signed videos. Speech/text translation and automatic sentence composition are outside the MVP.
+
+## Proposed workflow
+
+```text
+Video folder
+  → inventory and FFmpeg preparation
+  → FreeMoCap tracking and post-processing
+  → extraction quality checks
+  → Blender source skeleton
+  → character retargeting and bake
+  → animation validation and export
+  → output folder and batch report
 ```
 
-O FreeMoCap fornece dados de movimento; a integração com Blender transforma esses dados no esqueleto animado de origem. O pipeline reaproveitará esse caminho antes de considerar um solver próprio.
+Use the existing FreeMoCap-to-Blender integration before considering a custom motion solver. Independent videos of the same sign are separate jobs, not synchronized camera views.
 
-Vídeos independentes de um mesmo sinal são trabalhos separados, não câmeras de uma captura multicâmera. A profundidade monocular é estimada: gerar um arquivo 3D não comprova precisão nem inteligibilidade em LIBRAS. A checagem automática identifica problemas técnicos; a validação de qualidade inclui comparação visual e uma amostra avaliada por pessoas fluentes em LIBRAS. [Documentação de captura monocular do FreeMoCap](https://docs.freemocap.org/documentation/single-camera-recording.html).
+Monocular depth is estimated. Technical checks identify extraction problems; they do not certify LIBRAS intelligibility. Visual comparison and evaluation of a sample by fluent signers complement those checks. [FreeMoCap single-camera guide](https://docs.freemocap.org/documentation/single-camera-recording.html).
 
-## Estado atual
+## Current status
 
-CP1.0–CP1.6 estão implementados: inventário, inspeção, preparação FFmpeg, sessão FreeMoCap mínima, verificação técnica integrada e uma tela Tkinter simples. São etapas independentes da execução do FreeMoCap e do Blender e não alteram os vídeos de origem. Foram verificados 46 testes, incluindo mídias sintéticas, uma amostra real local, hashes, layout de sessão, decodificação, duração, reutilização segura e contratos da interface.
+CP1.0–CP1.6 are implemented: inventory, media inspection, FFmpeg preparation, a minimal FreeMoCap session layout, integrated technical verification and a simple Tkinter screen. These stages do not execute FreeMoCap or Blender or modify source videos. All 46 tests passed, including synthetic media, a local real sample, hashes, session layout, decoding, duration, safe reuse and UI contracts.
 
-Comandos disponíveis (FFmpeg/ffprobe no PATH para `inspect`):
+Available commands (FFmpeg/ffprobe on PATH for `inspect`):
 
 ```powershell
 python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-stage inventory
@@ -49,40 +54,38 @@ python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-sta
 python gui.py
 ```
 
-Cada execução salva um JSON em `output/reports/`. Para uso cotidiano, execute `python gui.py`: selecione um vídeo ou pasta, escolha a pasta de saída e clique em iniciar. Veja [uso da ingestão](docs/ingestion.md) para caminhos dos executáveis, metadados e códigos de saída. A validação com vídeos reais do V-LIBRASIL ainda está pendente.
+Reports are written to `output/reports/`. For daily use, run `python gui.py`, select a video or folder, choose an output folder and start processing. See the [ingestion guide (Portuguese)](docs/ingestion.md) for tool paths, metadata and exit codes. Homologated normalization, FreeMoCap execution, extraction, retargeting, batch resume and final delivery remain pending.
 
-Normalização homologada, execução do FreeMoCap, extração, retargeting, retomada de lote e entrega final continuam pendentes.
-
-Os comandos futuros abaixo são **propostas de interface, ainda não implementadas**:
+The following is a **proposed interface, not implemented**:
 
 ```powershell
 python cli.py --input-dir "./dataset/videos" --output-dir "./output" --avatar "./assets/avatar.blend" --rig-map "./config/rig-map.yaml" --profile "./config/profiles/libras.yaml"
 python cli.py --input-dir "./dataset/videos" --output-dir "./output" --avatar "./assets/avatar.blend" --rig-map "./config/rig-map.yaml" --profile "./config/profiles/libras.yaml" --resume
 ```
 
-A CLI aceita `--input-dir` ou `--video` com `--until-stage` obrigatório, usando as etapas `inventory`, `inspect`, `prepare`, `session` e `verify`, além das opções descritas no guia. Ela executa somente o serviço atual de ingestão e não gera a animação 3D completa:
+The CLI accepts `--input-dir` or `--video` with required `--until-stage`, using `inventory`, `inspect`, `prepare`, `session` and `verify`. It runs only the current ingestion service and does not produce the complete 3D animation:
 
 ```powershell
 python cli.py --help
 python cli.py --video "./video.mp4" --output-dir "./output" --until-stage verify
 ```
 
-## Ferramentas e ambiente
+## Tools and environment
 
-| Componente | Responsabilidade |
+| Component | Responsibility |
 |---|---|
-| Python | Inventário, execução por vídeo, configuração, relatórios e retomada. |
-| FFprobe / FFmpeg | Inspeção, decodificação e preparação da mídia. |
-| FreeMoCap | Extração do movimento e pós-processamento conforme a versão selecionada. |
-| MediaPipe / SkellyTracker | Rastreamento utilizado pela integração FreeMoCap escolhida. |
-| SkellyForge / NumPy / SciPy | Tratamento e análise dos dados; SkellyForge não é o motor de triangulação. |
-| Blender + integração FreeMoCap | Esqueleto de origem, retargeting, bake e exportação. |
+| Python | Inventory, orchestration, configuration, reports and resume. |
+| FFprobe / FFmpeg | Media inspection, decoding and preparation. |
+| FreeMoCap | Motion extraction and configured post-processing. |
+| MediaPipe / SkellyTracker | Tracking through the selected FreeMoCap integration. |
+| SkellyForge / NumPy / SciPy | Post-processing and data analysis; SkellyForge is not the triangulation engine. |
+| Blender and FreeMoCap integration | Source skeleton, retargeting, bake and export. |
 
-A referência local inspecionada é FreeMoCap **1.8.2**, cujos metadados aceitam Python `>=3.10,<3.13`. Python **3.12** é o candidato inicial. A combinação de FreeMoCap, Blender e add-on para extração será fixada no CP0. O personagem e a animação de referência estão em melhorias e permanecem indefinidos; sua integração será validada no CP3. A versão do fluxo manual, quando identificada, orientará a escolha.
+The inspected local reference is FreeMoCap **1.8.2**, whose package metadata specifies Python `>=3.10,<3.13`. Python **3.12** is the initial candidate. CP0 will establish the extraction environment from the manual workflow; character integration is validated in CP3.
 
-O `requirements.txt` atual possui intervalos abertos e ainda não representa um ambiente reprodutível. Não há promessa de compatibilidade com qualquer Blender ou Python mais recente. As releases do FreeMoCap distinguem as linhas 1.x e 2.x; a migração será uma decisão explícita. [Releases oficiais](https://github.com/freemocap/freemocap/releases).
+The current `requirements.txt` uses open version ranges and is not a reproducible environment lock. Blender, add-on and model compatibility must be verified for the selected combination. FreeMoCap releases distinguish the 1.x and 2.x lines; migration is an explicit decision. [Official releases](https://github.com/freemocap/freemocap/releases).
 
-Para preparar o ambiente de desenvolvimento candidato no Windows:
+Candidate Windows development setup:
 
 ```powershell
 py -3.12 -m venv .venv
@@ -90,13 +93,13 @@ py -3.12 -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-FFmpeg/ffprobe e Blender são executáveis externos. Seus caminhos e versões serão verificados no preflight das etapas que os utilizam; a integração do Blender ainda pertence aos próximos checkpoints.
+FFmpeg/ffprobe and Blender are external executables. Their versions and paths will be checked for the requested stages; Blender integration belongs to later checkpoints.
 
-## Entrada, saída e confiabilidade
+## Input, output and quality
 
-A entrada será um diretório local obtido do [V-LIBRASIL / UFPE](https://libras.cin.ufpe.br/) ou de outra coleção compatível. O inventário verificará os arquivos realmente presentes, sem presumir quantidade, FPS ou organização de uma distribuição específica. Identificadores, glosas e intérpretes serão preservados quando houver metadados; nomes de arquivo não serão tratados automaticamente como rótulos confiáveis.
+Input is a local copy obtained from [V-LIBRASIL / UFPE](https://libras.cin.ufpe.br/) or another compatible collection. Inventory the actual files instead of assuming a specific count, FPS or directory layout. Preserve IDs, glosses and signer metadata when provided; filenames alone are not trusted labels.
 
-Estrutura proposta de saída:
+Proposed output layout:
 
 ```text
 output/
@@ -108,20 +111,20 @@ output/
   reports/batch-<batch-id>.json
 ```
 
-Trabalhos com suspeita de perda de mãos, troca de identidade, rotação incorreta ou retargeting inválido ficam separados para revisão. Falhas mantêm logs e motivos. A ausência de rosto animado será declarada no metadado, inclusive nos resultados tecnicamente aprovados.
+Uncertain outputs are separated for review; failures retain logs and reasons. Metadata explicitly records the lack of facial animation, including technically accepted outputs.
 
-A primeira entrega será `.blend`. FBX e GLB serão acrescentados após validar duração, esqueleto e deformação no consumidor escolhido. O arquivo final com personagem e Action baked é distinto de exportar somente um clip reutilizável: esse segundo contrato será definido com o consumidor.
+The initial deliverable is `.blend`. FBX and GLB come after validation in the selected consumer. A file containing an animated character and an animation-only clip are distinct delivery contracts.
 
-## Desenvolvimento por checkpoints
+## Development checkpoints
 
-1. **CP0:** registrar a referência de extração manual até o esqueleto animado.
-2. **CP1:** inventariar a pasta e preparar vídeos compatíveis.
-   CP1.0–CP1.6 implementados e testados; a geração da animação 3D continua nos checkpoints seguintes.
-3. **CP2:** automatizar FreeMoCap e gerar o esqueleto animado de um vídeo.
-4. **CP3:** mapear o rig e aplicar a animação no personagem.
-5. **CP4:** calibrar configurações e checagens de confiabilidade.
-6. **CP5:** executar lote com isolamento de falhas e retomada.
-7. **CP6:** validar entrega, consumidor e desempenho.
-8. **CP7, melhoria:** acrescentar animação facial.
+1. **CP0:** record the manual extraction baseline through the animated source skeleton.
+2. **CP1:** inventory the folder and prepare compatible videos.
+   CP1.0–CP1.6 implemented and tested; 3D animation generation remains in later checkpoints.
+3. **CP2:** automate FreeMoCap and source skeleton generation.
+4. **CP3:** configure the target rig, retarget and bake once the character is defined.
+5. **CP4:** calibrate processing profiles and quality checks.
+6. **CP5:** add batch processing, failure isolation and resume.
+7. **CP6:** validate delivery, consumer compatibility and performance.
+8. **CP7, enhancement:** add facial animation.
 
-Cada checkpoint exige artefatos e verificações descritos no [plano](docs/planning.md). O detalhamento local fica em `docs/step-planning/`, ignorado pelo Git; o plano compartilhado permanece em `docs/planning.md`.
+See the [development plan](docs/planning.md) for acceptance criteria. Local checkpoint notes live in Git-ignored `docs/step-planning/`; shared decisions live in `docs/planning.md`.
