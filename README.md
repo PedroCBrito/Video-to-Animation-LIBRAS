@@ -38,9 +38,20 @@ Vídeos independentes de um mesmo sinal são trabalhos separados, não câmeras 
 
 ## Estado atual
 
-O projeto está na fase de revisão de arquitetura e definição dos checkpoints. O código existente contém uma CLI para um vídeo e a estrutura inicial dos módulos, mas o fluxo completo ainda não foi validado.
+CP1.0–CP1.6 estão implementados: inventário, inspeção, preparação FFmpeg, sessão FreeMoCap mínima, verificação técnica integrada e uma tela Tkinter simples. São etapas independentes da execução do FreeMoCap e do Blender e não alteram os vídeos de origem. Foram verificados 46 testes, incluindo mídias sintéticas, uma amostra real local, hashes, layout de sessão, decodificação, duração, reutilização segura e contratos da interface.
 
-A preparação atual verifica existência/extensão e copia o vídeo. Ainda faltam processamento em lote, normalização, integração corrigida com a versão instalada, avaliação de qualidade, mapeamento do personagem e exportação final validada. Os parâmetros de processamento recebidos pelo wrapper ainda não são aplicados.
+Comandos disponíveis (FFmpeg/ffprobe no PATH para `inspect`):
+
+```powershell
+python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-stage inventory
+python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-stage inspect
+python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-stage verify --profile "./config/profiles/cp1-media-default.yaml"
+python gui.py
+```
+
+Cada execução salva um JSON em `output/reports/`. Para uso cotidiano, execute `python gui.py`: selecione um vídeo ou pasta, escolha a pasta de saída e clique em iniciar. Veja [uso da ingestão](docs/ingestion.md) para caminhos dos executáveis, metadados e códigos de saída. A validação com vídeos reais do V-LIBRASIL ainda está pendente.
+
+Normalização homologada, execução do FreeMoCap, extração, retargeting, retomada de lote e entrega final continuam pendentes.
 
 Os comandos futuros abaixo são **propostas de interface, ainda não implementadas**:
 
@@ -49,11 +60,11 @@ python cli.py --input-dir "./dataset/videos" --output-dir "./output" --avatar ".
 python cli.py --input-dir "./dataset/videos" --output-dir "./output" --avatar "./assets/avatar.blend" --rig-map "./config/rig-map.yaml" --profile "./config/profiles/libras.yaml" --resume
 ```
 
-A CLI atual aceita apenas `--video`/`-v`, `--output-dir`/`-o` e `--config`/`-c`. Seu uso é experimental e não garante uma conversão completa:
+A CLI aceita `--input-dir` ou `--video` com `--until-stage` obrigatório, usando as etapas `inventory`, `inspect`, `prepare`, `session` e `verify`, além das opções descritas no guia. Ela executa somente o serviço atual de ingestão e não gera a animação 3D completa:
 
 ```powershell
 python cli.py --help
-python cli.py --video "./video.mp4" --output-dir "./output"
+python cli.py --video "./video.mp4" --output-dir "./output" --until-stage verify
 ```
 
 ## Ferramentas e ambiente
@@ -79,7 +90,7 @@ py -3.12 -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-FFmpeg/ffprobe e Blender são executáveis externos. Seus caminhos e versões serão verificados no preflight das etapas que os utilizam. O arquivo atual [config/config.yaml](config/config.yaml) é provisório; um caminho configurado não comprova integração validada.
+FFmpeg/ffprobe e Blender são executáveis externos. Seus caminhos e versões serão verificados no preflight das etapas que os utilizam; a integração do Blender ainda pertence aos próximos checkpoints.
 
 ## Entrada, saída e confiabilidade
 
@@ -105,6 +116,7 @@ A primeira entrega será `.blend`. FBX e GLB serão acrescentados após validar 
 
 1. **CP0:** registrar a referência de extração manual até o esqueleto animado.
 2. **CP1:** inventariar a pasta e preparar vídeos compatíveis.
+   CP1.0–CP1.6 implementados e testados; a geração da animação 3D continua nos checkpoints seguintes.
 3. **CP2:** automatizar FreeMoCap e gerar o esqueleto animado de um vídeo.
 4. **CP3:** mapear o rig e aplicar a animação no personagem.
 5. **CP4:** calibrar configurações e checagens de confiabilidade.

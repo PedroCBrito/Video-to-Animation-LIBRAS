@@ -1,0 +1,12 @@
+# Provisional media profile. Replace after the FreeMoCap contract is confirmed.
+schema_version: "1.0"
+name: cp1-default
+media:
+  output_container: mp4
+  video_codec: libx264
+  pixel_format: yuv420p
+  fps_mode: preserve
+  rotation: autorotate
+  remove_audio: true
+  preset: medium
+  crf: 18

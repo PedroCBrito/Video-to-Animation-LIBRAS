@@ -38,7 +38,18 @@ Monocular depth is estimated. Technical checks identify extraction problems; the
 
 ## Current status
 
-This repository is at the planning and integration stage. The existing code provides a single-video CLI and initial modules. It currently checks the input path/extension and copies the file. Batch processing, normalization, corrected backend integration, quality assessment, character mapping and validated final exports remain to be implemented. The wrapper does not yet apply the processing configuration it receives.
+CP1.0–CP1.6 are implemented: inventory, media inspection, FFmpeg preparation, a minimal FreeMoCap session layout, integrated technical verification and a simple Tkinter screen. These stages do not execute FreeMoCap or Blender or modify source videos. All 46 tests passed, including synthetic media, a local real sample, hashes, session layout, decoding, duration, safe reuse and UI contracts.
+
+Available commands (FFmpeg/ffprobe on PATH for `inspect`):
+
+```powershell
+python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-stage inventory
+python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-stage inspect
+python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-stage verify --profile "./config/profiles/cp1-media-default.yaml"
+python gui.py
+```
+
+Reports are written to `output/reports/`. For daily use, run `python gui.py`, select a video or folder, choose an output folder and start processing. See the [ingestion guide (Portuguese)](docs/ingestion.md) for tool paths, metadata and exit codes. Homologated normalization, FreeMoCap execution, extraction, retargeting, batch resume and final delivery remain pending.
 
 The following is a **proposed interface, not implemented**:
 
@@ -47,11 +58,11 @@ python cli.py --input-dir "./dataset/videos" --output-dir "./output" --avatar ".
 python cli.py --input-dir "./dataset/videos" --output-dir "./output" --avatar "./assets/avatar.blend" --rig-map "./config/rig-map.yaml" --profile "./config/profiles/libras.yaml" --resume
 ```
 
-The current CLI only accepts `--video`/`-v`, `--output-dir`/`-o` and `--config`/`-c`. It is experimental and does not guarantee a complete conversion:
+The CLI accepts `--input-dir` or `--video` with required `--until-stage`, using `inventory`, `inspect`, `prepare`, `session` and `verify`. It runs only the current ingestion service and does not produce the complete 3D animation:
 
 ```powershell
 python cli.py --help
-python cli.py --video "./video.mp4" --output-dir "./output"
+python cli.py --video "./video.mp4" --output-dir "./output" --until-stage verify
 ```
 
 ## Tools and environment
@@ -77,7 +88,7 @@ py -3.12 -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-FFmpeg/ffprobe and Blender are external executables. Their versions and paths will be checked for the requested stages. [config/config.yaml](config/config.yaml) is provisional.
+FFmpeg/ffprobe and Blender are external executables. Their versions and paths will be checked for the requested stages; Blender integration belongs to later checkpoints.
 
 ## Input, output and quality
 
@@ -103,6 +114,7 @@ The initial deliverable is `.blend`. FBX and GLB come after validation in the se
 
 1. **CP0:** record the manual extraction baseline through the animated source skeleton.
 2. **CP1:** inventory the folder and prepare compatible videos.
+   CP1.0–CP1.6 implemented and tested; 3D animation generation remains in later checkpoints.
 3. **CP2:** automate FreeMoCap and source skeleton generation.
 4. **CP3:** configure the target rig, retarget and bake once the character is defined.
 5. **CP4:** calibrate processing profiles and quality checks.
