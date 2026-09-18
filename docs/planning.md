@@ -1,9 +1,5 @@
 # Plano de desenvolvimento — Vídeos de LIBRAS para animações em lote
 
-Revisão: 2026-09-17. Situação: planejamento; checkpoints de implementação ainda não aprovados.
-
-Este documento substitui o plano anterior de sete POCs. A numeração CP0–CP7 abaixo é a referência vigente. O detalhamento local, o parecer consolidado e o acompanhamento em `docs/step-planning/` são auxiliares; em caso de divergência, prevalecem este plano e o escopo esclarecido pelo usuário. Consulte o [índice da documentação](README.md) para localizar cada documento.
-
 ## 1. Resultado desejado
 
 Automatizar o fluxo manual **vídeo → FreeMoCap → esqueleto animado → personagem no Blender → arquivo de animação**, repetindo-o para todos os vídeos de uma pasta.
@@ -28,6 +24,8 @@ Fora do MVP: tradução de fala/texto, composição de frases, multicâmera, sol
 
 Primeiro registrar a extração manual que funcione, incluindo arquivos e configurações. Depois reproduzir esse caso sem interface gráfica. Quando o personagem estiver definido, registrar e automatizar também as operações de retargeting. Só então concluir a comparação de parâmetros no avatar e homologar o lote completo.
 
+A execução terá dois caminhos de uso: uma tela simples para o uso cotidiano e a CLI para automação, depuração e execução em lote sem interface. A tela não terá configurações avançadas no MVP; ela apenas coleta a entrada, a pasta de saída e inicia o mesmo fluxo do orquestrador usado pela CLI.
+
 FreeMoCap permanece o motor de extração. Reutilizar sua integração Blender para gerar o esqueleto de origem; não construir uma armadura procedural ou um novo estimador como requisito inicial. Se uma operação do caminho manual não tiver interface automatizável, isolar essa operação e avaliar uma adaptação mínima antes de ampliar a arquitetura.
 
 As versões/add-ons ainda precisam ser identificados. O usuário informou que tem uma animação em melhorias e solicitou deixar esse material indefinido por enquanto. O personagem, o rig e a animação de referência permanecem pendentes, sem seleção automática. CP0–CP2 validam até o esqueleto de origem; CP3 e a entrega final dependem da definição posterior do personagem. O lote poderá ser exercitado até a etapa de extração enquanto isso.
@@ -51,7 +49,8 @@ Essas são interfaces internas sujeitas a mudança. Concentrar chamadas em um ad
 
 ```mermaid
 flowchart TD
-    A["Inventário de vídeos e metadados"] --> B["Preparação por clipe"]
+    U["Tela simples ou CLI"] --> A["Inventário de vídeos e metadados"]
+    A --> B["Preparação por clipe"]
     B --> C["FreeMoCap: dados brutos e tratados"]
     C --> D{"Verificação de extração"}
     D -- "válida" --> E["Integração Blender: esqueleto de origem"]
@@ -71,19 +70,40 @@ flowchart TD
 
 O diagrama descreve execução. A ordem de desenvolvimento abaixo comprova um caminho completo pequeno antes de concluir a calibração das verificações.
 
-| Módulo proposto | Responsabilidade |
+| Módulo ou pasta | Responsabilidade |
 |---|---|
 | `cli.py` | Argumentos, seleção de entrada e códigos de saída. |
-| `src/orchestrator.py` | Fluxo de um clipe, dependências entre etapas e relatórios. |
-| `src/batch_runner.py` | Inventário, fila sequencial, isolamento e retomada. |
-| `src/video_processor.py` | FFprobe/FFmpeg, política de mídia e sessão. |
-| `src/freemocap_wrapper.py` | Adaptador da versão escolhida, aplicação de parâmetros e coleta de artefatos. |
+| `gui.py` | Ponto de entrada da tela Tkinter para uso cotidiano. |
+| `src/application/` | Casos de uso do pipeline compartilhados pela CLI e pela tela. |
+| `src/common/` | Hashes, timestamps e persistência atômica compartilhados. |
+| `src/ui/` | Tela mínima: seleção de vídeo/pasta, pasta de saída, início, progresso e status, usando o mesmo serviço da CLI. |
+| `src/integrations/` | Adaptadores isolados para as integrações futuras de FreeMoCap e Blender. |
+| `src/ingestion/contracts.py` | Contratos de entrada, validação de caminhos e publicação de relatórios. |
+| `src/ingestion/inventory.py` | Inventário determinístico, metadados e estados de entrada. |
+| `src/ingestion/probe.py` | Inspeção read-only com FFprobe/FFmpeg e métricas de decodificação. |
+| `src/batch_runner.py` | Fila sequencial, isolamento e retomada; módulo futuro, ainda não implementado. |
+| `src/preparation/` | Perfis, comando FFmpeg, staging atômico e manifesto do vídeo preparado. |
+| `src/session/` | Materialização e validação do layout mínimo de sessão FreeMoCap. |
+| `src/verification/` | Verificação técnica integrada e manifestos de validação. |
 | `src/quality.py` | Métricas, regras versionadas e motivos de revisão. |
-| `src/blender_exporter.py` | Processo Blender, argumentos, timeout, logs e validação dos arquivos. |
 | `scripts/blender/` | Scripts executados pelo Python do Blender: importar, retargetear, fazer bake e exportar. |
 | `config/profiles/` e `config/rig-map.yaml` | Perfil experimental de extração e contrato do personagem. |
 
-Os nomes de módulos novos são propostas. Criá-los apenas quando o checkpoint precisar. Manter contratos simples por arquivos entre Python de extração e Blender; não pressupor que todo `site-packages` de um ambiente externo seja compatível com o Python embarcado.
+Os módulos de CP1 já implementados formam a base compartilhada para a CLI e para a tela futura. Criar módulos de etapas posteriores apenas quando o checkpoint precisar. Manter contratos simples por arquivos entre Python de extração e Blender; não pressupor que todo `site-packages` de um ambiente externo seja compatível com o Python embarcado.
+
+### Tela mínima de operação
+
+A tela do MVP deve caber em uma janela única e mostrar somente:
+
+- um campo de entrada com seletor para um vídeo ou uma pasta de vídeos;
+- um campo de saída com seletor da pasta onde as animações e o relatório serão salvos;
+- um botão para iniciar o processamento;
+- uma barra de progresso e uma mensagem de estado, incluindo o vídeo atual e a etapa atual;
+- uma mensagem final com sucesso, revisão ou falha e um atalho para abrir a pasta de saída.
+
+O seletor de entrada deve aceitar arquivo e pasta, deixando explícito que uma pasta é descoberta recursivamente segundo as regras do CP1. A tela deve validar caminhos antes de iniciar, impedir a saída dentro da entrada quando isso puder causar redescoberta e informar erros de seleção sem encerrar silenciosamente. Durante o processamento, os campos e o botão de início ficam bloqueados; deve existir cancelamento controlado que preserve o estado para retomada pela tela ou pela CLI. O progresso representa o lote e deve continuar atualizando durante etapas longas, mesmo quando não houver percentual interno disponível.
+
+Perfis, avatar, mapa do rig e opções avançadas permanecem fora da tela inicial. Até que esses valores tenham defaults homologados, a tela deve exigir um perfil/configuração válida ou informar que a etapa correspondente ainda está indisponível; não deve inventar um personagem ou esconder parâmetros efetivos. O relatório, logs e manifestos continuam sendo a fonte detalhada para diagnóstico.
 
 ## 4. Contratos de entrada, saída e rastreabilidade
 
@@ -108,9 +128,12 @@ Os nomes de módulos novos são propostas. Criá-los apenas quando o checkpoint 
 output/
   work/<clip-id>/<run-id>/
     source.json
-    prepared/camera_01.mp4
+    prepared/video.mp4
+    preparation.json
     freemocap/
       synchronized_videos/camera_01.mp4
+      session.json
+    verification.json
       output_data/...
     source_skeleton.blend
     retargeted.blend
@@ -140,7 +163,7 @@ Separar metadados imutáveis de origem de `state.json` mutável por execução. 
 
 ## 5. Checkpoints de implementação
 
-Todos os checkpoints abaixo estão **não iniciados**. Documentação pronta não equivale a funcionalidade aprovada.
+CP1 está **em andamento**: CP1.0–CP1.6 foram implementados e verificados sequencialmente com 46 testes acumulados, incluindo mídia sintética real e uma amostra local real. O FreeMoCap ainda não foi executado pelo pipeline; CP2 e os demais checkpoints permanecem pendentes.
 
 ### CP0 — Reproduzir o fluxo manual
 
@@ -162,6 +185,8 @@ Todos os checkpoints abaixo estão **não iniciados**. Documentação pronta nã
 
 **Objetivo:** entregar uma sessão válida para o backend selecionado.
 
+**Progresso:** CP1.0–CP1.2 cobrem base/relatórios, inventário e inspeção somente de leitura. CP1.3–CP1.5 foram implementados sobre uma arquitetura separada de preparação, sessão e verificação, e CP1.6 adicionou a tela Tkinter sobre o serviço compartilhado; veja [uso e evidências](ingestion.md). A CLI oferece `--until-stage inventory`, `inspect`, `prepare`, `session` e `verify`. A integração efetiva do backend continua no CP2 e depende do contrato do CP0.
+
 1. Descobrir vídeos, gerar IDs e inventário; preservar metadados do dataset quando disponíveis.
 2. Inspecionar mídia com FFprobe: stream, codec, resolução, timestamps, duração, FPS e orientação.
 3. Validar decodificação e produzir diagnóstico de entrada inválida.
@@ -175,6 +200,28 @@ FFmpeg regulariza FPS descartando ou duplicando frames; preservar duração e ra
 **Aceite:** formatos suportados cobertos, vídeo VFR tratado conforme política, nomes repetidos sem colisão, fonte intacta, entrada corrompida diagnosticada e backend encontrando exatamente um vídeo por sessão. Testes sintéticos de mídia mais amostra real. Amostragem de decodificação não pode ser reportada como integridade integral.
 
 **Evidências:** inventário, metadados antes/depois, teste de descoberta pelo adaptador e tempos separados de inspeção/conversão. Não impor cinco segundos por minuto sem benchmark.
+
+### CP1.6 — Tela simples de entrada e acompanhamento
+
+**Estado:** implementado com Tkinter em `src/ui/` e `gui.py`. A tela executa o fluxo CP1 completo pelo serviço compartilhado, mantendo a CLI disponível para automação.
+
+**Objetivo:** permitir que uma pessoa processe um vídeo ou uma pasta sem precisar memorizar comandos da CLI.
+
+1. Escolher uma tecnologia de janela compatível com o ambiente homologado e manter a tela desacoplada do código específico do FreeMoCap e do Blender.
+2. Expor seleção de arquivo de vídeo ou pasta de vídeos e seleção da pasta de saída; validar os caminhos antes de criar o lote.
+3. Reutilizar a mesma API de serviço da CLI para criar a execução, aplicar o perfil selecionado por configuração e publicar as saídas.
+4. Exibir progresso global, vídeo atual, etapa atual e mensagens de revisão/falha vindas do relatório, sem substituir os logs detalhados.
+5. Executar o processamento em worker separado da thread da interface para manter a janela responsiva; atualizar a tela por eventos de estado persistidos em `state.json`.
+6. Permitir cancelamento controlado e retomada de uma execução compatível, respeitando os hashes e as regras do CP5.
+7. Exibir o resultado final e permitir abrir a pasta de saída; registrar a mesma execução independentemente de ter sido iniciada pela tela ou pela CLI.
+
+**Fora deste checkpoint:** editor de parâmetros, visualização 3D, reprodução do vídeo, fila de múltiplos lotes, login, processamento em tempo real e escolha automática de avatar/rig.
+
+**Aceite:** uma pessoa consegue selecionar um vídeo e uma pasta de saída, iniciar um processamento de teste, acompanhar a etapa atual e localizar o resultado sem usar a CLI. O mesmo teste iniciado pela CLI produz contratos equivalentes. A janela permanece responsiva, entradas inválidas são explicadas, cancelamento não corrompe o estado e uma retomada compatível não repete etapas concluídas.
+
+**Evidências:** captura ou roteiro reproduzível da tela, teste de arquivo único e pasta, validação de caminhos, atualização de progresso, cancelamento/retomada e comparação do relatório gerado pela tela com o gerado pela CLI.
+
+**Evidências atuais:** construção da janela validada no Windows, testes de contrato para seleção/progresso e execução da regressão com 46 testes aprovados. O cancelamento é tratado entre etapas; a repetição da execução reutiliza artefatos compatíveis pelos hashes. A geração de animação 3D permanece fora do CP1 e será ativada pelos checkpoints posteriores.
 
 ### CP2 — Automatizar FreeMoCap e o esqueleto de origem
 
@@ -257,23 +304,25 @@ O status de qualidade será `pass`, `review` ou `fail`, com motivos, intervalos 
 8. Publicar atomicamente entregas aprovadas, preservando execuções anteriores.
 9. Relatório consolidado com cada entrada, resultado, motivos, caminhos e tempo por etapa.
 
-CLI proposta, ainda não implementada:
+CLI do lote completo proposta abaixo; a interface parcial de inventário/inspeção já implementada está no [guia da ingestão](ingestion.md). As demais etapas e opções continuam futuras:
 
 ```text
 --input-dir / --video       entradas mutuamente exclusivas
 --output-dir               raiz de trabalho, relatórios e animações
 --avatar --rig-map          necessários para retargeting/exportação
 --profile                  perfil de mídia, FreeMoCap e qualidade
---until-stage              prepare | extract | retarget | export
+--until-stage              prepare | session | verify | extract | retarget | export
 --resume                   reutilizar somente etapas compatíveis e verificadas
 --limit                    limitar lote para experimentos
 ```
 
-`extract` inclui os dados FreeMoCap e o esqueleto de origem `source_skeleton.blend`, portanto requer Blender, mas não requer personagem nem mapa de destino. `prepare` termina na sessão preparada e não requer Blender. `retarget` e `export` exigem o personagem definido no CP3. A aprovação de uma execução parcial vale somente para as etapas solicitadas; não representa conclusão do pipeline completo.
+`prepare` termina no vídeo preparado e não requer Blender; `session` acrescenta o layout mínimo de sessão e também não executa FreeMoCap; `verify` executa as três etapas anteriores e revalida seus artefatos. `extract` inclui os dados FreeMoCap e o esqueleto de origem `source_skeleton.blend`, portanto requer Blender, mas não requer personagem nem mapa de destino. `retarget` e `export` exigem o personagem definido no CP3. A aprovação de uma execução parcial vale somente para as etapas solicitadas; não representa conclusão do pipeline completo.
 
 Preflight verifica apenas dependências das etapas solicitadas. Códigos de saída propostos: 0 para lote todo aprovado tecnicamente, 2 para lote concluído com revisões/falhas individuais, 1 para erro global. Cancelamento recebe código distinto documentado na implementação.
 
 **Aceite:** lote de teste com vídeo válido, corrompido e nomes repetidos; falha local isolada; interromper e retomar; mudar apenas rig e comprovar reutilização da extração; mudar vídeo e comprovar invalidação. Conferir que toda entrada aparece uma única vez no relatório com status final.
+
+O CP5 deve incluir um ensaio iniciado pela tela para confirmar que o caminho visual acompanha o mesmo estado, progresso, cancelamento e relatório do caminho de CLI. A tela pode iniciar arquivo único ou lote, mas não deve criar uma segunda implementação do pipeline.
 
 ### CP6 — Entrega e validação final do MVP
 
@@ -311,6 +360,7 @@ Limiares numéricos de erro/performance serão registrados antes do aceite corre
 | Requisito | Checkpoints | Evidência |
 |---|---|---|
 | R1 — Pasta e identificação por vídeo | CP1, CP5 | Inventário e relatório sem colisão/perda. |
+| R1.1 — Uso simples sem CLI | CP1.6, CP5 | Seleção de vídeo/pasta, pasta de saída, progresso, cancelamento e acesso ao resultado. |
 | R2 — Mídia compatível e fonte preservada | CP1 | Inspeção/decodificação e sessão aceita. |
 | R3 — FreeMoCap automatizado com parâmetros aplicados | CP0, CP2 | Comparação manual/automática e parâmetros efetivos. |
 | R4 — Corpo e mãos no personagem | CP3 | Mapa, bake, arquivo reaberto e preview. |
@@ -327,11 +377,11 @@ O plano compartilhado fica aqui. O diretório local de checkpoints é ignorado p
 
 O acompanhamento local fica em `docs/step-planning/progresso.md`. Ensaios de lote até `extract` podem avançar enquanto o personagem está pendente; CP5 completo continua exigindo a verificação de retomada do retargeting e da exportação.
 
-Próxima ação de implementação: CP0, com um vídeo real, registrando a extração manual e a versão correspondente. Depois seguir CP1 → CP2 até o esqueleto animado. CP3 aguardará a definição do personagem/animação de referência; ao ser concluído, teremos a primeira conversão completa antes de otimizar e homologar o lote final.
+Próximo incremento: CP2, executando o FreeMoCap por adaptador e homologando o perfil com o contrato final definido no CP0. CP1.3–CP1.6 estão implementados e verificados; CP3 aguardará a definição do personagem/animação de referência.
 
 ## 9. Referências e origem dos dados
 
 - [V-LIBRASIL, portal UFPE](https://libras.cin.ufpe.br/): origem de referência indicada para a coleção. A cópia local e seus metadados ainda serão inspecionados; nenhuma contagem ou FPS foi presumido.
 - Fontes técnicas estão vinculadas nas decisões correspondentes acima.
 - Código de FreeMoCap 1.8.2 instalado localmente: interfaces, layout e defaults registrados na seção 2. Precisam ser reconfirmados se a versão escolhida no CP0 mudar.
-- Código atual do projeto: wrappers e CLI são estrutura inicial; os checkpoints não foram executados nesta revisão documental.
+- Código atual: CLI e tela Tkinter de ingestão, preparação, sessão e verificação implementadas; adaptadores de extração e exportação permanecem experimentais. Evidências dos testes de CP1.0–CP1.6 estão no [guia](ingestion.md).
