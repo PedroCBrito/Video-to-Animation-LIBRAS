@@ -123,7 +123,3 @@ The initial deliverable is `.blend`. FBX and GLB come after validation in the se
 8. **CP7, enhancement:** add facial animation.
 
 See the [development plan](docs/planning.md) for acceptance criteria. Local checkpoint notes live in Git-ignored `docs/step-planning/`; shared decisions live in `docs/planning.md`.
-
-## License
-
-Repository code is covered by the [MIT license](LICENSE). Datasets, models, dependencies and characters retain their respective licenses and terms.

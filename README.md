@@ -125,7 +125,3 @@ A primeira entrega será `.blend`. FBX e GLB serão acrescentados após validar 
 8. **CP7, melhoria:** acrescentar animação facial.
 
 Cada checkpoint exige artefatos e verificações descritos no [plano](docs/planning.md). O detalhamento local fica em `docs/step-planning/`, ignorado pelo Git; o plano compartilhado permanece em `docs/planning.md`.
-
-## Licença
-
-O código deste repositório utiliza a [licença MIT](LICENSE). Dataset, modelos, dependências e personagem mantêm suas próprias licenças e condições de uso.
