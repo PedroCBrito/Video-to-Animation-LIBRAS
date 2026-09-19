@@ -1,6 +1,6 @@
 # Uso da ingestão — CP1.0 a CP1.6
 
-Implementado e verificado em Python 3.12 no Windows. O inventário usa apenas a biblioteca padrão; a inspeção requer FFprobe e FFmpeg. FreeMoCap, Blender e personagem não são carregados nessas etapas.
+Implementado e verificado em Python 3.12 no Windows. O inventário usa apenas a biblioteca padrão; a inspeção requer FFprobe e FFmpeg. A tela verifica previamente FFmpeg, FFprobe, o pacote Python do FreeMoCap e Blender, mas as etapas atuais ainda não executam FreeMoCap ou Blender.
 
 A organização do código separa o serviço de aplicação (`src/application/`), utilitários compartilhados (`src/common/`), etapas de preparação/sessão/verificação e adaptadores externos futuros (`src/integrations/`).
 
@@ -14,7 +14,20 @@ python gui.py
 
 A tela permite selecionar um vídeo ou uma pasta, escolher a pasta de saída, iniciar o fluxo CP1 completo e acompanhar a etapa atual pela barra de progresso. O processamento ocorre em segundo plano para manter a janela responsiva. O botão de cancelamento encerra o fluxo entre etapas seguras, preservando os artefatos publicados; iniciar novamente na mesma saída permite reutilizar preparações e sessões compatíveis.
 
-O modo simples usa o perfil CP1 padrão e os executáveis `ffmpeg`/`ffprobe` encontrados no `PATH`. A tela mostra o relatório final e pode abrir a pasta de saída. Como FreeMoCap e Blender ainda pertencem aos próximos checkpoints, a tela atualmente prepara, organiza e verifica os artefatos técnicos; ela ainda não gera uma animação 3D final.
+### Preflight antes do processamento
+
+Antes de habilitar o processamento, a tela verifica quatro dependências obrigatórias:
+
+- **FFmpeg:** preparação e decodificação da mídia;
+- **FFprobe:** leitura de streams, timestamps e metadados;
+- **FreeMoCap:** pacote Python que será usado pela extração do CP2;
+- **Blender:** integração e exportação do esqueleto nos próximos checkpoints.
+
+Cada item aparece como `OK` ou `FALTA`, com uma explicação. O botão **Iniciar processamento** fica bloqueado enquanto houver alguma dependência ausente. O botão **Baixar** de cada linha abre a página oficial da ferramenta; a tela não instala programas automaticamente. FFmpeg e FFprobe podem ser encontrados no `PATH` ou pelos caminhos `FFMPEG_BIN` e `FFPROBE_BIN`. Para Blender, a tela verifica `PATH`, `BLENDER_BIN`, instalações comuns do Windows em qualquer unidade disponível e também oferece **Localizar** para selecionar manualmente `blender.exe`. Depois da instalação, use **Atualizar verificações**.
+
+O modo simples usa o perfil CP1 padrão e os caminhos detectados no preflight. A tela mostra o relatório final e pode abrir a pasta de saída. Como FreeMoCap e Blender ainda pertencem aos próximos checkpoints, a tela atualmente prepara, organiza e verifica os artefatos técnicos; ela ainda não gera uma animação 3D final.
+
+Durante a execução, a seção **Etapas** mostra cada fase como aguardando, em andamento, concluída, concluída com pendências, cancelada ou falha. O status do vídeo atual e o motivo retornado pelo serviço aparecem na mensagem de progresso. Ao terminar com problemas, a tela lista as primeiras falhas/pendências e mantém o relatório completo para diagnóstico.
 
 ## Inventário (CP1.1)
 
@@ -137,7 +150,7 @@ Cada execução publica `output/reports/<stage>-<batch-id>.json`, incluindo `inv
 
 Código 0: pelo menos um candidato válido para a etapa e nenhuma ocorrência pendente. Código 2: inspeção/inventário concluído com ocorrências, metadados sem correspondência, ou nenhum candidato válido. Código 1: erro global de caminhos, configuração, ferramentas ou publicação. Argumentos inválidos da CLI usam o código 2 do argparse.
 
-Esses estados pertencem à ingestão e não substituem `pass/review/fail` da qualidade de animação futura. A CLI exige `--until-stage` e executa o serviço atual; `prepare`, `session` e `verify` são as etapas implementadas de CP1.3–CP1.5; a tela CP1.6 executa `verify` com o perfil padrão. `extract`, `retarget`, `export`, `--resume`, `--avatar` e `--rig-map` continuam propostos, não implementados.
+Esses estados pertencem à ingestão e não substituem `pass/review/fail` da qualidade de animação futura. A CLI exige `--until-stage` e executa o serviço compartilhado; `prepare`, `session` e `verify` são as etapas de CP1.3–CP1.5, e `extract` integra o CP2 com perfil FreeMoCap, evidências e esqueleto de origem. A tela atual executa o fluxo simples de CP1.6; ela já reconhece o status da etapa `extract`, enquanto a configuração avançada do backend permanece explícita na CLI. `retarget`, `export`, `--resume`, `--avatar` e `--rig-map` continuam propostos.
 
 ## Verificação executada
 
@@ -148,7 +161,10 @@ Esses estados pertencem à ingestão e não substituem `pass/review/fail` da qua
 5. CP1.4: 36 testes acumulados passaram, sem skips. Os cinco novos testes cobrem sessão mínima, layout único, manifesto, reutilização/adulteração, falha isolada e CLI.
 6. CP1.5: 40 testes acumulados passaram, sem skips. Os quatro novos testes cobrem FPS racional, verificação técnica, preservação de revisão e CLI completa.
 7. Refatoração estrutural: 42 testes passaram, incluindo os novos testes dos utilitários comuns e a execução da CLI pela camada de aplicação compartilhada.
-8. CP1.6: 46 testes passaram, incluindo construção da tela, validação de seleção, eventos de progresso, estado persistido e cancelamento controlado.
+8. CP1.6: 49 testes foram executados; 40 passaram e 9 integrações foram ignoradas sem FFmpeg/FFprobe acessíveis, incluindo construção da tela, preflight de dependências, validação de seleção, eventos de progresso/status, estado persistido e cancelamento controlado.
+9. CP2.4: métricas, classificação técnica e overlays SVG vinculados ao `run_id`, com quatro testes controlados.
+10. CP2.5: adaptador Blender com processo controlado, publicação atômica, hashes, logs e falhas explícitas, com quatro testes controlados.
+11. CP2.6: etapa `extract` no serviço, composição configurável na CLI, estados por sessão e suporte de status na tela, com testes de serviço/CLI/UI e regressão final de 78 testes; 69 passaram e 9 integrações de mídia foram ignoradas sem FFmpeg/FFprobe acessíveis.
 
 ```powershell
 python -m unittest discover -s tests -v

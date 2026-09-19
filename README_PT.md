@@ -43,7 +43,7 @@ Vídeos independentes de um mesmo sinal são trabalhos separados, não câmeras 
 
 ## Estado atual
 
-CP1.0–CP1.6 estão implementados: inventário, inspeção, preparação FFmpeg, sessão FreeMoCap mínima, verificação técnica integrada e uma tela Tkinter simples. São etapas independentes da execução do FreeMoCap e do Blender e não alteram os vídeos de origem. Foram verificados 46 testes, incluindo mídias sintéticas, uma amostra real local, hashes, layout de sessão, decodificação, duração, reutilização segura e contratos da interface.
+CP1.0–CP1.6 estão implementados: inventário, inspeção, preparação FFmpeg, sessão FreeMoCap mínima, verificação técnica integrada e uma tela Tkinter simples. CP2.0–CP2.6 também foram implementados em contratos e testes controlados para extração isolada, evidências, esqueleto de origem, serviço e CLI. A execução real de FreeMoCap, vídeo e Blender ainda precisa ser homologada.
 
 Comandos disponíveis (FFmpeg/ffprobe no PATH para `inspect`):
 
@@ -54,9 +54,9 @@ python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-sta
 python gui.py
 ```
 
-Cada execução salva um JSON em `output/reports/`. Para uso cotidiano, execute `python gui.py`: selecione um vídeo ou pasta, escolha a pasta de saída e clique em iniciar. Veja [uso da ingestão](docs/ingestion.md) para caminhos dos executáveis, metadados e códigos de saída. A validação com vídeos reais do V-LIBRASIL ainda está pendente.
+Cada execução salva um JSON em `output/reports/`. Para uso cotidiano, execute `python gui.py`: instale as dependências indicadas no preflight, selecione um vídeo ou pasta, escolha a pasta de saída e clique em iniciar. Veja [uso da ingestão](docs/ingestion.md) para caminhos dos executáveis, downloads, metadados e códigos de saída. A validação com vídeos reais do V-LIBRASIL ainda está pendente.
 
-Normalização homologada, execução do FreeMoCap, extração, retargeting, retomada de lote e entrega final continuam pendentes.
+CP2.0–CP2.6 foram implementados em contratos e testes controlados: preflight do ambiente, adaptador isolado, perfil efetivo, preservação dos artefatos por sessão, métricas/overlays, exportação controlada do esqueleto e integração ao serviço/CLI. A execução real do FreeMoCap/Blender, validação visual, retargeting, retomada de lote e entrega final continuam pendentes.
 
 Os comandos futuros abaixo são **propostas de interface, ainda não implementadas**:
 
