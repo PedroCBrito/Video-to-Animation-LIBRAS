@@ -4,6 +4,7 @@ import tempfile
 import threading
 import unittest
 
+import cli
 from src.application import IngestionCancelled, run_ingestion
 
 
@@ -21,6 +22,7 @@ class ApplicationServiceTests(unittest.TestCase):
 
             self.assertEqual(result.exit_code, 0)
             self.assertEqual([event["progress_percent"] for event in events], [0, 100, 100])
+            self.assertEqual([event["stage_status"] for event in events], ["running", "completed", "completed"])
             state = json.loads((output / "state.json").read_text(encoding="utf-8"))
             self.assertEqual(state["status"], "completed")
             self.assertEqual(state["progress_percent"], 100)
@@ -42,3 +44,16 @@ class ApplicationServiceTests(unittest.TestCase):
             state = json.loads((output / "state.json").read_text(encoding="utf-8"))
             self.assertEqual(state["status"], "cancelled")
             self.assertFalse((output / "reports").exists())
+
+    def test_extract_requires_an_explicit_backend_callback(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source = root / "entrada"
+            source.mkdir()
+            with self.assertRaisesRegex(ValueError, "extraction callback"):
+                run_ingestion(source, root / "saida", "extract")
+
+    def test_cli_extract_requires_versioned_backend_contracts(self):
+        with self.assertRaises(SystemExit) as raised:
+            cli.main(["--input-dir", "entrada", "--until-stage", "extract"])
+        self.assertEqual(raised.exception.code, 2)

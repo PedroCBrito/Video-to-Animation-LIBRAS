@@ -15,11 +15,12 @@ from src.ingestion.probe import MediaInspector, inspect_inventory
 from src.preparation import load_profile, prepare_inventory, preparation_exit_code
 from src.session import create_sessions, session_exit_code
 from src.verification import verification_exit_code, verify_inventory
+from src.extraction import extract_inventory, extraction_exit_code
 
 
-IngestionStage = Literal["inventory", "inspect", "prepare", "session", "verify"]
+IngestionStage = Literal["inventory", "inspect", "prepare", "session", "verify", "extract"]
 ProgressCallback = Callable[[dict[str, Any]], None]
-_STAGES = ("inventory", "inspect", "prepare", "session", "verify")
+_STAGES = ("inventory", "inspect", "prepare", "session", "verify", "extract")
 
 
 class IngestionCancelled(RuntimeError):
@@ -47,6 +48,7 @@ def run_ingestion(
     timeout: float = 120,
     progress_callback: ProgressCallback | None = None,
     cancel_event: Any | None = None,
+    extractor: Callable[[Path], Any] | None = None,
 ) -> IngestionRun:
     """Run the requested stages in order and publish the report.
 
@@ -55,6 +57,8 @@ def run_ingestion(
     Cancellation is checked between stages; the current FFmpeg/FFprobe call is
     allowed to finish and all published artifacts remain atomic.
     """
+    if stage == "extract" and extractor is None:
+        raise ValueError("A configured extraction callback is required for the extract stage.")
     source = Path(source)
     output = Path(output)
     paths = validate_paths(source, output, directory=source.is_dir())
@@ -70,15 +74,15 @@ def run_ingestion(
             "updated_at": utc_now(), **extra,
         })
 
-    def emit(stage_name: str, completed: int, message: str, **extra: Any) -> None:
+    def emit(stage_name: str, completed: int, message: str, *, stage_status: str = "running", **extra: Any) -> None:
         percent = round(completed / len(selected_stages) * 100)
         event = {
             "stage": stage_name, "completed_stages": completed,
             "total_stages": len(selected_stages), "progress_percent": percent,
-            "message": message, **extra,
+            "message": message, "stage_status": stage_status, **extra,
         }
         last_progress.update(stage=stage_name, percent=percent, message=message)
-        save_state("running", stage_name, percent, message, **extra)
+        save_state("running", stage_name, percent, message, stage_status=stage_status, **extra)
         if progress_callback is not None:
             progress_callback(event)
 
@@ -87,16 +91,25 @@ def run_ingestion(
         completed = _STAGES.index(stage_name) + fraction
         percent = round(completed / len(selected_stages) * 100)
         message = f"Vídeo processado: {entry.get('relative_path', entry.get('source_path', 'desconhecido'))}."
+        if stage_name == "inspect":
+            entry_status = entry.get("status")
+            entry_reason = entry.get("reason")
+        else:
+            result_key = {"verify": "verification", "extract": "extraction"}.get(stage_name, stage_name)
+            stage_result = entry.get(result_key, {})
+            entry_status = stage_result.get("status")
+            entry_reason = stage_result.get("reason")
         event = {
             "stage": stage_name, "completed_stages": completed,
             "total_stages": len(selected_stages), "progress_percent": percent,
-            "message": message, "current_entry": entry.get("relative_path"),
+            "message": message, "stage_status": "entry", "current_entry": entry.get("relative_path"),
             "entry_index": index, "entry_total": total,
+            "entry_status": entry_status, "entry_reason": entry_reason,
         }
         last_progress.update(stage=stage_name, percent=percent, message=message)
         save_state("running", stage_name, percent, message,
-                   current_entry=entry.get("relative_path"), entry_index=index,
-                   entry_total=total)
+                   stage_status="entry", current_entry=entry.get("relative_path"), entry_index=index,
+                   entry_total=total, entry_status=entry_status, entry_reason=entry_reason)
         if progress_callback is not None:
             progress_callback(event)
         check_cancelled()
@@ -113,9 +126,9 @@ def run_ingestion(
         emit("inventory", 0, "Inventariando os arquivos de entrada.")
         check_cancelled()
         report = build_inventory(paths, metadata_json)
-        emit("inventory", 1, "Inventário concluído.", entries=len(report["entries"]))
+        emit("inventory", 1, "Inventário concluído.", stage_status="completed", entries=len(report["entries"]))
         check_cancelled()
-        if inspector is None and stage in {"inspect", "prepare", "session", "verify"}:
+        if inspector is None and stage in {"inspect", "prepare", "session", "verify", "extract"}:
             inspector = MediaInspector(ffprobe, ffmpeg, timeout)
         if inspector is not None:
             emit("inspect", 1, "Inspecionando vídeos com FFmpeg/FFprobe.", entries=len(report["entries"]))
@@ -123,9 +136,9 @@ def run_ingestion(
                 report, inspector,
                 lambda index, total, entry: emit_entry("inspect", index, total, entry),
             )
-            emit("inspect", 2, "Inspeção concluída.", entries=len(report["entries"]))
+            emit("inspect", 2, "Inspeção concluída.", stage_status="completed", entries=len(report["entries"]))
             check_cancelled()
-        if stage in {"prepare", "session", "verify"}:
+        if stage in {"prepare", "session", "verify", "extract"}:
             media_profile = load_profile(profile)
             emit("prepare", len(selected_stages[:2]), "Preparando vídeos compatíveis.", entries=len(report["entries"]))
             report = prepare_inventory(
@@ -133,23 +146,30 @@ def run_ingestion(
                 validator=inspector.inspect, timeout=timeout,
                 progress_callback=lambda index, total, entry: emit_entry("prepare", index, total, entry),
             )
-            emit("prepare", len(selected_stages[:3]), "Preparação concluída.", entries=len(report["entries"]))
+            emit("prepare", len(selected_stages[:3]), "Preparação concluída.", stage_status="completed", entries=len(report["entries"]))
             check_cancelled()
-        if stage in {"session", "verify"}:
+        if stage in {"session", "verify", "extract"}:
             emit("session", len(selected_stages[:3]), "Criando sessões compatíveis com FreeMoCap.", entries=len(report["entries"]))
             report = create_sessions(
                 report,
                 progress_callback=lambda index, total, entry: emit_entry("session", index, total, entry),
             )
-            emit("session", len(selected_stages[:4]), "Sessões concluídas.", entries=len(report["entries"]))
+            emit("session", len(selected_stages[:4]), "Sessões concluídas.", stage_status="completed", entries=len(report["entries"]))
             check_cancelled()
-        if stage == "verify":
+        if stage in {"verify", "extract"}:
             emit("verify", len(selected_stages[:4]), "Verificando os artefatos gerados.", entries=len(report["entries"]))
             report = verify_inventory(
                 report, inspector=inspector.inspect,
                 progress_callback=lambda index, total, entry: emit_entry("verify", index, total, entry),
             )
-            emit("verify", len(selected_stages), "Verificação concluída.", entries=len(report["entries"]))
+            emit("verify", len(selected_stages), "Verificação concluída.", stage_status="completed", entries=len(report["entries"]))
+        if stage == "extract":
+            emit("extract", len(selected_stages[:5]), "Executando a extração por sessão.", entries=len(report["entries"]))
+            report = extract_inventory(
+                report, extractor,
+                progress_callback=lambda index, total, entry: emit_entry("extract", index, total, entry),
+            )
+            emit("extract", len(selected_stages), "Extração concluída.", stage_status="completed", entries=len(report["entries"]))
 
         report_path = write_report(report, paths.output)
         save_state("completed", stage, 100, "Processamento concluído.", report_path=str(report_path))
@@ -157,7 +177,8 @@ def run_ingestion(
             progress_callback({
                 "stage": stage, "completed_stages": len(selected_stages),
                 "total_stages": len(selected_stages), "progress_percent": 100,
-                "message": "Processamento concluído.", "report_path": str(report_path),
+                "message": "Processamento concluído.", "stage_status": "completed",
+                "report_path": str(report_path),
             })
         if stage == "prepare":
             exit_code = preparation_exit_code(report)
@@ -165,6 +186,8 @@ def run_ingestion(
             exit_code = session_exit_code(report)
         elif stage == "verify":
             exit_code = verification_exit_code(report)
+        elif stage == "extract":
+            exit_code = extraction_exit_code(report)
         else:
             exit_code = report_exit_code(report)
         return IngestionRun(report, report_path, exit_code)

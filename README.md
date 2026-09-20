@@ -43,7 +43,7 @@ Monocular depth is estimated. Technical checks identify extraction problems; the
 
 ## Current status
 
-CP1.0–CP1.6 are implemented: inventory, media inspection, FFmpeg preparation, a minimal FreeMoCap session layout, integrated technical verification and a simple Tkinter screen. These stages do not execute FreeMoCap or Blender or modify source videos. All 46 tests passed, including synthetic media, a local real sample, hashes, session layout, decoding, duration, safe reuse and UI contracts.
+CP1.0–CP1.6 are implemented: inventory, media inspection, FFmpeg preparation, a minimal FreeMoCap session layout, integrated technical verification and a simple Tkinter screen. CP2.0–CP2.6 are implemented with controlled contracts and tests for isolated extraction, evidence, source skeleton export, service and CLI integration. Real FreeMoCap/video/Blender validation remains pending.
 
 Available commands (FFmpeg/ffprobe on PATH for `inspect`):
 
@@ -54,7 +54,7 @@ python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-sta
 python gui.py
 ```
 
-Reports are written to `output/reports/`. For daily use, run `python gui.py`, select a video or folder, choose an output folder and start processing. See the [ingestion guide (Portuguese)](docs/ingestion.md) for tool paths, metadata and exit codes. Homologated normalization, FreeMoCap execution, extraction, retargeting, batch resume and final delivery remain pending.
+Reports are written to `output/reports/`. For daily use, run `python gui.py`, install the dependencies shown by the preflight, select a video or folder, choose an output folder and start processing. See the [ingestion guide (Portuguese)](docs/ingestion.md) for tool downloads, paths, metadata and exit codes. The CLI `--until-stage extract` additionally requires an explicit extraction profile, supported-parameter contract and FreeMoCap entrypoint. Real backend execution, visual validation, retargeting, batch resume and final delivery remain pending.
 
 The following is a **proposed interface, not implemented**:
 
