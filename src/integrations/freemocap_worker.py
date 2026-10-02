@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import importlib.metadata
 import inspect
 import json
 from pathlib import Path
@@ -32,9 +33,11 @@ def invoke_entrypoint(
                          for parameter in signature.parameters.values())
     if session_argument not in signature.parameters and not accepts_kwargs:
         raise RuntimeError(f"Entrypoint does not accept '{session_argument}'.")
-    accepted = dict(options) if accepts_kwargs else {
-        name: value for name, value in options.items() if name in signature.parameters
-    }
+    if not accepts_kwargs:
+        unsupported = sorted(set(options) - set(signature.parameters))
+        if unsupported:
+            raise RuntimeError(f"Entrypoint does not accept options: {', '.join(unsupported)}")
+    accepted = dict(options)
     accepted[session_argument] = str(session_dir)
     return function(**accepted)
 
@@ -49,6 +52,17 @@ def main(argv: list[str] | None = None) -> int:
     options: dict[str, Any] = {}
     if args.config:
         options = json.loads(args.config.read_text(encoding="utf-8"))
+        if not isinstance(options, dict):
+            raise RuntimeError("FreeMoCap configuration must be a JSON object.")
+        backend = options.get("backend", {})
+        if backend.get("name") == "freemocap" and backend.get("version"):
+            installed = importlib.metadata.version("freemocap")
+            if installed != backend["version"]:
+                raise RuntimeError(f"FreeMoCap {installed} instalado; perfil exige {backend['version']}.")
+        if "applied_parameters" in options:
+            options = options["applied_parameters"]
+            if not isinstance(options, dict):
+                raise RuntimeError("FreeMoCap applied_parameters must be a JSON object.")
     invoke_entrypoint(args.entrypoint, args.session.resolve(), args.session_argument, options)
     print(f"FreeMoCap session completed: {args.session.resolve()}")
     return 0

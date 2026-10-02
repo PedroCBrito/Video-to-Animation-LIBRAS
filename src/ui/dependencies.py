@@ -117,6 +117,7 @@ def _windows_blender_candidates() -> list[Path]:
 
     for root in roots:
         candidates.extend((
+            root / "blender.exe",
             root / "Blender Foundation" / "Blender" / "blender.exe",
             root / "Blender" / "blender.exe",
             root / "Steam" / "steamapps" / "common" / "Blender" / "blender.exe",
@@ -138,6 +139,23 @@ def discover_blender() -> str | None:
                 return str(candidate.resolve())
         except OSError:
             continue
+    return None
+
+
+def discover_media(name: str, *, environment: Mapping[str, str] | None = None,
+                   which: DependencyFinder = shutil.which) -> str | None:
+    environment = os.environ if environment is None else environment
+    definition = next(d for d in DEPENDENCY_DEFINITIONS if d["key"] == name)
+    location, _ = _find_executable(definition, environment, which)
+    if location or environment.get(str(definition.get("environment"))):
+        return location
+    root = environment.get("LOCALAPPDATA")
+    if os.name == "nt" and root and name in {"ffmpeg", "ffprobe"}:
+        try:
+            candidates = sorted((Path(root) / "Microsoft/WinGet/Packages").glob(f"Gyan.FFmpeg_*/*/bin/{name}.exe"))
+            return next((str(p.resolve()) for p in reversed(candidates) if p.is_file()), None)
+        except OSError:
+            return None
     return None
 
 
@@ -175,6 +193,10 @@ def check_dependencies(
             continue
 
         location, detail = _find_executable(definition, environment, which)
+        if key in {"ffmpeg", "ffprobe"} and location is None:
+            location = discover_media(key, environment=environment, which=which)
+            if location:
+                detail = "Encontrado em uma instalação do Windows."
         if key == "blender" and location is None and not environment.get("BLENDER_BIN"):
             discovered = blender_discoverer()
             if discovered and Path(discovered).is_file():

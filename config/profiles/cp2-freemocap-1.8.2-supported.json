@@ -1,0 +1,5 @@
+{
+  "run_blender": {"type": "boolean", "required": true},
+  "make_jupyter_notebook": {"type": "boolean", "required": true},
+  "use_tqdm": {"type": "boolean", "required": true}
+}

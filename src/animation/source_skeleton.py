@@ -25,6 +25,7 @@ class SourceSkeletonResult:
 
     manifest: dict[str, Any]
     manifest_path: Path
+    reused: bool = False
 
     @property
     def succeeded(self) -> bool:
@@ -89,6 +90,18 @@ def export_source_skeleton(
     extraction = extraction_data["manifest"]
     destination = recording / "source_skeleton.blend"
     manifest_path = recording / "source_skeleton.json"
+    compatibility = {"session_manifest_sha256": sha256_file(recording / "session.json"),
+                     "extraction_manifest_sha256": sha256_file(recording / "freemocap.json"),
+                     "exporter": exporter.identity()}
+    if manifest_path.is_file():
+        previous = _load_manifest(manifest_path)
+        if previous.get("status") == "completed":
+            if previous.get("compatibility") != compatibility:
+                raise SourceSkeletonError("Esqueleto existente sem contrato compatível com o exportador atual; use outra pasta de saída.")
+            if (previous.get("output_path") != destination.name or not destination.is_file()
+                    or sha256_file(destination) != previous.get("output_sha256")):
+                raise SourceSkeletonError("Esqueleto concluído ausente ou alterado; reuso bloqueado.")
+            return SourceSkeletonResult(previous, manifest_path, reused=True)
     temporary = _temporary_output(destination)
     result = exporter.run_export(recording, temporary, timeout=timeout, cancel_event=cancel_event)
     process = _process_evidence(result, recording)
@@ -117,7 +130,7 @@ def export_source_skeleton(
         "output_path": "source_skeleton.blend" if status == "completed" else None,
         "output_sha256": sha256_file(destination) if status == "completed" else None,
         "output_size_bytes": destination.stat().st_size if status == "completed" else None,
-        "process": process, "error": error,
+        "process": process, "error": error, "compatibility": compatibility,
     }
     write_json_atomic(manifest_path, manifest)
     return SourceSkeletonResult(manifest, manifest_path)

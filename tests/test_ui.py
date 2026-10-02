@@ -22,7 +22,7 @@ class UiContractTests(unittest.TestCase):
             "current_entry": "sinal.mp4",
         })
         self.assertEqual(message, "Preparação dos vídeos: Preparando. (2 vídeo(s)) Vídeo atual: sinal.mp4.")
-        self.assertEqual(set(STAGE_LABELS), {"inventory", "inspect", "prepare", "session", "verify", "extract"})
+        self.assertEqual(set(STAGE_LABELS), {"inventory", "inspect", "prepare", "session", "verify", "extract", "retarget"})
 
     def test_progress_text_exposes_entry_status_and_reason(self):
         message = progress_text({

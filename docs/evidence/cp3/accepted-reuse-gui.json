@@ -1,0 +1,36 @@
+{
+  "status": "pass",
+  "frontend": "gui",
+  "elapsed_seconds": 11.438,
+  "pipeline_result": "completed",
+  "files": {
+    ".pipeline/work/clip_6fb4328c422f758c2ba237afe20d3552/run_fe9e78fdfd11a49e45826e79/freemocap/source_skeleton.blend": {
+      "sha256": "181279591097860ee72bc9a5a7ca40df0478f53bfd0d7172f12f752420df026c",
+      "mtime_ns": 1790968488363923900
+    },
+    ".pipeline/work/clip_6fb4328c422f758c2ba237afe20d3552/run_fe9e78fdfd11a49e45826e79/retarget/221ff8a4a392ce319bcf/retarget-input.json": {
+      "sha256": "56094f2da43e0ef84c95cc6fa844827d2b6888a1e2772feb6e82b0578fedef6f",
+      "mtime_ns": 1790968491725147600
+    },
+    ".pipeline/work/clip_6fb4328c422f758c2ba237afe20d3552/run_fe9e78fdfd11a49e45826e79/retarget/221ff8a4a392ce319bcf/animation.blend": {
+      "sha256": "78826e76ffefd8c992ad7b1b48cf9d43ba57ca547f08fda075e89ccd1b159370",
+      "mtime_ns": 1790968551429523800
+    },
+    ".pipeline/work/clip_6fb4328c422f758c2ba237afe20d3552/run_fe9e78fdfd11a49e45826e79/retarget/221ff8a4a392ce319bcf/preview.mp4": {
+      "sha256": "6b170523a98a468496a69dda3ef1368e353782a28b20a25a1692e4cccb80f60f",
+      "mtime_ns": 1790968549543911900
+    },
+    "animations/clip_6fb4328c422f758c2ba237afe20d3552/cp3_221ff8a4a392ce319bcf/animation.blend": {
+      "sha256": "78826e76ffefd8c992ad7b1b48cf9d43ba57ca547f08fda075e89ccd1b159370",
+      "mtime_ns": 1790968554619085400
+    },
+    "animations/clip_6fb4328c422f758c2ba237afe20d3552/cp3_221ff8a4a392ce319bcf/preview.mp4": {
+      "sha256": "6b170523a98a468496a69dda3ef1368e353782a28b20a25a1692e4cccb80f60f",
+      "mtime_ns": 1790968554620086000
+    }
+  },
+  "files_unchanged": true,
+  "report_path": "E:\\Video-to-Animation-LIBRAS-CP3\\current\\.pipeline\\reports\\retarget-da828e885f054f1c8334c212c5923484.json",
+  "avatar_original_sha256": "0725cf76324fea57d62872351986ca044ba58ae2376f045bde5f927bb34f33d4",
+  "video_sha256": "7880b246d7f0f415b9ccc911aed546990f8455fbe130f8dc1ee2484601bea53e"
+}

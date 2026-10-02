@@ -178,6 +178,9 @@ def generate_evidence(
         raise ValueError("Evidence dimensions and sample limit must be positive.")
 
     selected_pose = _pose_path(recording, pose_path)
+    if selected_pose is None and pose_path is None:
+        from src.extraction.npy_evidence import normalize_freemocap_pose
+        selected_pose = normalize_freemocap_pose(recording)
     output_dir = recording / "overlay"
     output_dir.mkdir(parents=True, exist_ok=True)
     evidence_path = recording / "evidence.json"
@@ -194,6 +197,9 @@ def generate_evidence(
         frames, metadata = _load_frames(selected_pose)
         metrics = _metrics(frames)
         status, reason = _status(metrics)
+        metadata.pop("frames", None)
+        if status == "pass" and metadata.get("technical_review_reasons"):
+            status, reason = "review", "; ".join(metadata["technical_review_reasons"])
         pose_hash = sha256_file(selected_pose)
 
     sample_indices = list(range(min(len(frames), sample_limit)))
@@ -217,5 +223,9 @@ def generate_evidence(
         "overlay": {"directory": "overlay", "frames": overlay_files,
                     "width": width, "height": height},
     }
+    if evidence_path.is_file():
+        previous = _load_json(evidence_path)
+        if {k: v for k, v in previous.items() if k != "created_at"} == {k: v for k, v in manifest.items() if k != "created_at"}:
+            return EvidenceResult(previous, evidence_path)
     write_json_atomic(evidence_path, manifest)
     return EvidenceResult(manifest, evidence_path)

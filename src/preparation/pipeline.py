@@ -16,6 +16,8 @@ def _run_id(entry: dict[str, Any], profile: MediaPreparationProfile, tool: str) 
         "clip_id": entry["clip_id"], "source_sha256": entry["sha256"],
         "profile": profile.fingerprint(), "ffmpeg": str(tool),
     }
+    if entry.get("processing_namespace"):
+        payload["extraction_profile"] = entry["processing_namespace"]
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     import hashlib
     return "run_" + hashlib.sha256(encoded.encode("utf-8")).hexdigest()[:24]

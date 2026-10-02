@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "avatar_sha256": "0725cf76324fea57d62872351986ca044ba58ae2376f045bde5f927bb34f33d4",
+  "evidence": ["output/reports/avatar-hands-front.png", "output/reports/avatar-hands-back.png"],
+  "review_status": "visually_reviewed_for_this_avatar",
+  "armature": "Armature",
+  "meshes": {"right": "Mao direita", "left": "mao esquerda"},
+  "fingers": {
+    "right": {
+      "thumb": ["Bone.012", "Bone.013", "Bone.018"],
+      "index": ["Bone.009", "Bone.010", "Bone.011", "Bone.014"],
+      "middle": ["Bone.006", "Bone.007", "Bone.008", "Bone.015"],
+      "ring": ["Bone", "Bone.001", "Bone.002", "Bone.016"],
+      "pinky": ["Bone.003", "Bone.004", "Bone.005", "Bone.017"]
+    },
+    "left": {
+      "thumb": ["Bone.035", "Bone.036", "Bone.037"],
+      "index": ["Bone.031", "Bone.032", "Bone.033", "Bone.034"],
+      "middle": ["Bone.027", "Bone.028", "Bone.029", "Bone.030"],
+      "ring": ["Bone.019", "Bone.020", "Bone.021", "Bone.022"],
+      "pinky": ["Bone.023", "Bone.024", "Bone.025", "Bone.026"]
+    }
+  }
+}

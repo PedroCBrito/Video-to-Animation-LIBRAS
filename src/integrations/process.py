@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import os
+import signal
 import subprocess
 import time
 from typing import Any, Sequence
@@ -28,6 +30,16 @@ class ProcessResult:
 
 def _finish_process(process: subprocess.Popen[str], *, timeout: float = 5) -> tuple[str, str]:
     """Stop a process and collect remaining output without hanging forever."""
+    if process.poll() is None:
+        try:
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                               stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               timeout=timeout, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            else:
+                os.killpg(process.pid, signal.SIGTERM)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
     try:
         process.terminate()
     except OSError:
@@ -49,6 +61,7 @@ def run_process(
     timeout: float,
     cancel_event: Any | None = None,
     poll_seconds: float = 0.05,
+    env: dict[str, str] | None = None,
 ) -> ProcessResult:
     """Run an argv command with timeout and cooperative cancellation.
 
@@ -61,18 +74,22 @@ def run_process(
     if not argv:
         raise ValueError("Process command cannot be empty.")
     started = time.monotonic()
+    if cancel_event is not None and cancel_event.is_set():
+        return ProcessResult(argv, None, "", "", 0, cancelled=True)
     try:
         process = subprocess.Popen(
             list(argv), cwd=str(Path(cwd).resolve()), stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
             encoding="utf-8", errors="replace",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8", **(env or {})},
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            start_new_session=os.name != "nt",
         )
     except OSError as error:
         elapsed = time.monotonic() - started
         return ProcessResult(argv, None, "", str(error), elapsed)
 
-    while process.poll() is None:
+    while True:
         elapsed = time.monotonic() - started
         if cancel_event is not None and cancel_event.is_set():
             stdout, stderr = _finish_process(process)
@@ -80,9 +97,12 @@ def run_process(
         if elapsed >= timeout:
             stdout, stderr = _finish_process(process)
             return ProcessResult(argv, process.returncode, stdout, stderr, elapsed, timed_out=True)
-        time.sleep(poll_seconds)
-
-    stdout, stderr = process.communicate()
-    return ProcessResult(
-        argv, process.returncode, stdout, stderr, time.monotonic() - started,
-    )
+        try:
+            # communicate drains both pipes while waiting. Polling without
+            # reading can deadlock verbose backends once an OS pipe fills.
+            stdout, stderr = process.communicate(timeout=min(poll_seconds, timeout - elapsed))
+        except subprocess.TimeoutExpired:
+            continue
+        return ProcessResult(
+            argv, process.returncode, stdout, stderr, time.monotonic() - started,
+        )

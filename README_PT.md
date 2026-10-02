@@ -5,7 +5,7 @@
 [![FreeMoCap: pip](https://img.shields.io/badge/FreeMoCap-pip%20package-brightgreen.svg)](https://freemocap.org/)
 [![Blender: 3.6+ / 5.2+](https://img.shields.io/badge/Blender-3.6%2B%20%7C%205.2%2B-orange.svg)](https://www.blender.org/)
 
-[English](README_EN.md) 
+[English](README.md)
 
 Pipeline offline para transformar uma pasta de vídeos de intérpretes sinalizando em LIBRAS em uma pasta de animações aplicadas a um personagem 3D. O dataset de referência é o **V-LIBRASIL**; o motor de extração é o **FreeMoCap**, e o retargeting e a exportação são feitos no **Blender**.
 
@@ -15,7 +15,7 @@ O objetivo é automatizar o fluxo que pode ser realizado manualmente: preparar o
 
 - Entrada: pasta local de vídeos, incluindo subpastas, com uma pessoa sinalizando por vídeo.
 - Prioridade: tronco, braços, punhos e dedos das duas mãos; cabeça conforme os dados disponíveis.
-- Um personagem de referência, com rig e mapeamento de ossos configurados uma vez quando definido. O material do usuário está em melhorias; nenhuma escolha de rig foi assumida.
+- Um personagem e mapa configurados uma vez. O protótipo CP3 usa o `animation.blend` fornecido: duas mãos e dedos animados, corpo estático por ausência de rig de tronco/braços.
 - Saída inicial: um arquivo `.blend` por vídeo aprovado tecnicamente, com personagem e Action baked, preview e relatório de qualidade.
 - Processamento sequencial, continuidade após falhas individuais e retomada de trabalhos compatíveis.
 - Expressões faciais detalhadas são uma melhoria posterior. O MVP será identificado como animação de corpo e mãos com face não validada.
@@ -43,29 +43,29 @@ Vídeos independentes de um mesmo sinal são trabalhos separados, não câmeras 
 
 ## Estado atual
 
-CP1.0–CP1.6 estão implementados: inventário, inspeção, preparação FFmpeg, sessão FreeMoCap mínima, verificação técnica integrada e uma tela Tkinter simples. CP2.0–CP2.6 também foram implementados em contratos e testes controlados para extração isolada, evidências, esqueleto de origem, serviço e CLI. A execução real de FreeMoCap, vídeo e Blender ainda precisa ser homologada.
+CP1, CP2 e o protótipo CP3 das duas mãos executam pelo serviço compartilhado entre CLI e Tkinter. Um vídeo real gerou animação baked e preview sincronizado, passou na reabertura independente no Blender e recebeu aceite visual do usuário para as duas mãos. Repetições CLI/GUI reutilizam os mesmos artefatos. O protótipo está fechado nesse escopo; corpo completo e validação linguística permanecem separados. Veja o [guia e registro de validação do CP3](docs/cp3.md).
 
-Comandos disponíveis (FFmpeg/ffprobe no PATH para `inspect`):
+Com o ambiente Python configurado, FFmpeg/FFprobe e Blender disponíveis:
 
 ```powershell
+python cli.py --video "./Abacaxi_Articulador1.mp4" --output-dir "E:/Video-to-Animation-LIBRAS-CP3/result"
 python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-stage inventory
 python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-stage inspect
 python cli.py --input-dir "./dataset/videos" --output-dir "./output" --until-stage verify --profile "./config/profiles/cp1-media-default.yaml"
 python gui.py
 ```
 
-Cada execução salva um JSON em `output/reports/`. Para uso cotidiano, execute `python gui.py`: instale as dependências indicadas no preflight, selecione um vídeo ou pasta, escolha a pasta de saída e clique em iniciar. Veja [uso da ingestão](docs/ingestion.md) para caminhos dos executáveis, downloads, metadados e códigos de saída. A validação com vídeos reais do V-LIBRASIL ainda está pendente.
+Para uso cotidiano, execute `python gui.py`, selecione o vídeo e a saída e clique em iniciar. A CLI também executa o protótipo completo por padrão. Cada pacote contém `animation.blend`, `preview.mp4` e `metadata.json`. Intermediários e diagnósticos ficam em `.pipeline/` dentro da saída. Confira o preview e registre a revisão pela tela ou CLI para promover o pacote de `review/` para `animations/`.
 
-CP2.0–CP2.6 foram implementados em contratos e testes controlados: preflight do ambiente, adaptador isolado, perfil efetivo, preservação dos artefatos por sessão, métricas/overlays, exportação controlada do esqueleto e integração ao serviço/CLI. A execução real do FreeMoCap/Blender, validação visual, retargeting, retomada de lote e entrega final continuam pendentes.
+Repetições compatíveis conferem hashes e reutilizam captura, esqueleto e animação. Calibração geral de perfis, retomada avançada de lote, outros formatos e animação corporal/facial continuam nos checkpoints posteriores. A geração técnica não certifica inteligibilidade em LIBRAS.
 
-Os comandos futuros abaixo são **propostas de interface, ainda não implementadas**:
+Também é possível parar em uma etapa anterior:
 
 ```powershell
-python cli.py --input-dir "./dataset/videos" --output-dir "./output" --avatar "./assets/avatar.blend" --rig-map "./config/rig-map.yaml" --profile "./config/profiles/libras.yaml"
-python cli.py --input-dir "./dataset/videos" --output-dir "./output" --avatar "./assets/avatar.blend" --rig-map "./config/rig-map.yaml" --profile "./config/profiles/libras.yaml" --resume
+python cli.py --video "./video.mp4" --output-dir "./output" --until-stage verify
 ```
 
-A CLI aceita `--input-dir` ou `--video` com `--until-stage` obrigatório, usando as etapas `inventory`, `inspect`, `prepare`, `session` e `verify`, além das opções descritas no guia. Ela executa somente o serviço atual de ingestão e não gera a animação 3D completa:
+A CLI aceita `--input-dir` ou `--video`; `--until-stage` é opcional. Etapas: `inventory`, `inspect`, `prepare`, `session`, `verify`, `extract`, `retarget`. `export` atualmente equivale à entrega `.blend` do CP3; FBX/GLB e `--resume` não estão implementados. O comando parcial `extract` exige perfil e contrato explícitos. Veja [uso da ingestão](docs/ingestion.md) para essas opções.
 
 ```powershell
 python cli.py --help
@@ -83,9 +83,9 @@ python cli.py --video "./video.mp4" --output-dir "./output" --until-stage verify
 | SkellyForge / NumPy / SciPy | Tratamento e análise dos dados; SkellyForge não é o motor de triangulação. |
 | Blender + integração FreeMoCap | Esqueleto de origem, retargeting, bake e exportação. |
 
-A referência local inspecionada é FreeMoCap **1.8.2**, cujos metadados aceitam Python `>=3.10,<3.13`. Python **3.12** é o candidato inicial. A combinação de FreeMoCap, Blender e add-on para extração será fixada no CP0. O personagem e a animação de referência estão em melhorias e permanecem indefinidos; sua integração será validada no CP3. A versão do fluxo manual, quando identificada, orientará a escolha.
+O ambiente exercitado no CP3 usa Python 3.12.3, FreeMoCap 1.8.2, Blender 5.2.2 LTS e add-on AJC 2026.4.1039. As versões diretas Python estão em `requirements.txt`; esse arquivo não é lock transitivo nem promessa de compatibilidade com outras versões.
 
-O `requirements.txt` atual possui intervalos abertos e ainda não representa um ambiente reprodutível. Não há promessa de compatibilidade com qualquer Blender ou Python mais recente. As releases do FreeMoCap distinguem as linhas 1.x e 2.x; a migração será uma decisão explícita. [Releases oficiais](https://github.com/freemocap/freemocap/releases).
+`requirements.txt` reutiliza as versões diretas validadas de `requirements.txt`, evitando uma segunda lista divergente. Não é um lock transitivo nem promessa de compatibilidade com qualquer Blender ou Python mais recente. A migração do FreeMoCap será uma decisão explícita. [Releases oficiais](https://github.com/freemocap/freemocap/releases).
 
 Para preparar o ambiente de desenvolvimento candidato no Windows:
 
@@ -101,7 +101,7 @@ FFmpeg/ffprobe e Blender são executáveis externos. Seus caminhos e versões se
 
 A entrada será um diretório local obtido do [V-LIBRASIL / UFPE](https://libras.cin.ufpe.br/) ou de outra coleção compatível. O inventário verificará os arquivos realmente presentes, sem presumir quantidade, FPS ou organização de uma distribuição específica. Identificadores, glosas e intérpretes serão preservados quando houver metadados; nomes de arquivo não serão tratados automaticamente como rótulos confiáveis.
 
-Estrutura proposta de saída:
+Estrutura atual de saída do CP3:
 
 ```text
 output/
@@ -109,8 +109,10 @@ output/
   animations/<clip-id>/<run-id>/preview.mp4
   animations/<clip-id>/<run-id>/metadata.json
   review/<clip-id>/<run-id>/
-  work/<clip-id>/<run-id>/
-  reports/batch-<batch-id>.json
+  .pipeline/work/<clip-id>/<run-id>/
+  .pipeline/reports/
+  .pipeline/runtime/
+  .pipeline/state.json
 ```
 
 Trabalhos com suspeita de perda de mãos, troca de identidade, rotação incorreta ou retargeting inválido ficam separados para revisão. Falhas mantêm logs e motivos. A ausência de rosto animado será declarada no metadado, inclusive nos resultados tecnicamente aprovados.

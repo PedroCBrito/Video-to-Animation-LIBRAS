@@ -1,0 +1,14 @@
+schema_version: "1.0"
+name: freemocap-1.8.2-hands-monocular-depth
+backend:
+  name: freemocap
+  version: "1.8.2"
+  entrypoint: src.integrations.freemocap_backend:process_recording
+parameters:
+  run_blender: false
+  make_jupyter_notebook: false
+  use_tqdm: false
+  flatten_single_camera_data: false
+metadata:
+  session_argument: recording_path
+  purpose: cp3_hands_depth_validation

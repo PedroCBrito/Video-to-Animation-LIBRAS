@@ -16,11 +16,13 @@ from src.preparation import load_profile, prepare_inventory, preparation_exit_co
 from src.session import create_sessions, session_exit_code
 from src.verification import verification_exit_code, verify_inventory
 from src.extraction import extract_inventory, extraction_exit_code
+from src.animation.retarget_stage import retarget_inventory, retarget_exit_code
+from src.application.workspace import exclusive_retarget
 
 
-IngestionStage = Literal["inventory", "inspect", "prepare", "session", "verify", "extract"]
+IngestionStage = Literal["inventory", "inspect", "prepare", "session", "verify", "extract", "retarget"]
 ProgressCallback = Callable[[dict[str, Any]], None]
-_STAGES = ("inventory", "inspect", "prepare", "session", "verify", "extract")
+_STAGES = ("inventory", "inspect", "prepare", "session", "verify", "extract", "retarget")
 
 
 class IngestionCancelled(RuntimeError):
@@ -36,6 +38,7 @@ class IngestionRun:
     exit_code: int
 
 
+@exclusive_retarget
 def run_ingestion(
     source: Path,
     output: Path,
@@ -49,6 +52,7 @@ def run_ingestion(
     progress_callback: ProgressCallback | None = None,
     cancel_event: Any | None = None,
     extractor: Callable[[Path], Any] | None = None,
+    retargeter: Callable[[Path, dict[str, Any]], Any] | None = None,
 ) -> IngestionRun:
     """Run the requested stages in order and publish the report.
 
@@ -57,13 +61,16 @@ def run_ingestion(
     Cancellation is checked between stages; the current FFmpeg/FFprobe call is
     allowed to finish and all published artifacts remain atomic.
     """
-    if stage == "extract" and extractor is None:
+    if stage in {"extract", "retarget"} and extractor is None:
         raise ValueError("A configured extraction callback is required for the extract stage.")
+    if stage == "retarget" and retargeter is None:
+        raise ValueError("A configured retarget callback is required for the retarget stage.")
     source = Path(source)
     output = Path(output)
     paths = validate_paths(source, output, directory=source.is_dir())
+    workspace = paths.output / ".pipeline" if stage == "retarget" else paths.output
     selected_stages = _STAGES[:_STAGES.index(stage) + 1]
-    state_path = paths.output / "state.json"
+    state_path = workspace / "state.json"
     last_progress = {"stage": "inventory", "percent": 0, "message": "Iniciando."}
 
     def save_state(status: str, stage_name: str, percent: int, message: str, **extra: Any) -> None:
@@ -126,9 +133,17 @@ def run_ingestion(
         emit("inventory", 0, "Inventariando os arquivos de entrada.")
         check_cancelled()
         report = build_inventory(paths, metadata_json)
+        if stage == "retarget":
+            # Discover with the public output excluded, then keep all intermediates internal.
+            report["delivery_output"] = str(paths.output)
+            report["output"] = str(workspace)
+            for entry in report["entries"]:
+                namespace = getattr(extractor, "profile_fingerprint", None)
+                if namespace:
+                    entry["processing_namespace"] = namespace
         emit("inventory", 1, "Inventário concluído.", stage_status="completed", entries=len(report["entries"]))
         check_cancelled()
-        if inspector is None and stage in {"inspect", "prepare", "session", "verify", "extract"}:
+        if inspector is None and stage in {"inspect", "prepare", "session", "verify", "extract", "retarget"}:
             inspector = MediaInspector(ffprobe, ffmpeg, timeout)
         if inspector is not None:
             emit("inspect", 1, "Inspecionando vídeos com FFmpeg/FFprobe.", entries=len(report["entries"]))
@@ -138,7 +153,7 @@ def run_ingestion(
             )
             emit("inspect", 2, "Inspeção concluída.", stage_status="completed", entries=len(report["entries"]))
             check_cancelled()
-        if stage in {"prepare", "session", "verify", "extract"}:
+        if stage in {"prepare", "session", "verify", "extract", "retarget"}:
             media_profile = load_profile(profile)
             emit("prepare", len(selected_stages[:2]), "Preparando vídeos compatíveis.", entries=len(report["entries"]))
             report = prepare_inventory(
@@ -148,7 +163,7 @@ def run_ingestion(
             )
             emit("prepare", len(selected_stages[:3]), "Preparação concluída.", stage_status="completed", entries=len(report["entries"]))
             check_cancelled()
-        if stage in {"session", "verify", "extract"}:
+        if stage in {"session", "verify", "extract", "retarget"}:
             emit("session", len(selected_stages[:3]), "Criando sessões compatíveis com FreeMoCap.", entries=len(report["entries"]))
             report = create_sessions(
                 report,
@@ -156,23 +171,42 @@ def run_ingestion(
             )
             emit("session", len(selected_stages[:4]), "Sessões concluídas.", stage_status="completed", entries=len(report["entries"]))
             check_cancelled()
-        if stage in {"verify", "extract"}:
+        if stage in {"verify", "extract", "retarget"}:
             emit("verify", len(selected_stages[:4]), "Verificando os artefatos gerados.", entries=len(report["entries"]))
             report = verify_inventory(
                 report, inspector=inspector.inspect,
                 progress_callback=lambda index, total, entry: emit_entry("verify", index, total, entry),
             )
-            emit("verify", len(selected_stages), "Verificação concluída.", stage_status="completed", entries=len(report["entries"]))
-        if stage == "extract":
+            emit("verify", 5, "Verificação concluída.", stage_status="completed", entries=len(report["entries"]))
+        if stage in {"extract", "retarget"}:
             emit("extract", len(selected_stages[:5]), "Executando a extração por sessão.", entries=len(report["entries"]))
             report = extract_inventory(
                 report, extractor,
                 progress_callback=lambda index, total, entry: emit_entry("extract", index, total, entry),
             )
-            emit("extract", len(selected_stages), "Extração concluída.", stage_status="completed", entries=len(report["entries"]))
+            emit("extract", 6, "Extração concluída.", stage_status="completed", entries=len(report["entries"]))
+            check_cancelled()
+        if stage == "retarget":
+            emit("retarget", 6, "Verificando vínculos CP2 e transferindo movimento.", entries=len(report["entries"]))
+            report = retarget_inventory(
+                report, retargeter,
+                progress_callback=lambda index, total, entry: emit_entry("retarget", index, total, entry),
+            )
+            emit("retarget", len(selected_stages), "Retargeting concluído.", stage_status="completed", entries=len(report["entries"]))
 
-        report_path = write_report(report, paths.output)
-        save_state("completed", stage, 100, "Processamento concluído.", report_path=str(report_path))
+        outcome = "completed"
+        if stage == "retarget":
+            summary = report.get("retarget_summary", {})
+            outcome = ("failed" if any(summary.get(k) for k in ("failed", "not_run")) else
+                       "cancelled" if summary.get("cancelled") else
+                       "review" if summary.get("review") else "completed")
+            if not report["entries"]:
+                outcome = "failed"
+                report["reason"] = "Nenhum vídeo compatível foi encontrado."
+            report["result_status"] = outcome
+        report_path = write_report(report, workspace)
+        save_state(outcome, stage, 100, "Processamento concluído.", execution_status="completed",
+                   result_status=outcome, report_path=str(report_path))
         if progress_callback is not None:
             progress_callback({
                 "stage": stage, "completed_stages": len(selected_stages),
@@ -188,6 +222,8 @@ def run_ingestion(
             exit_code = verification_exit_code(report)
         elif stage == "extract":
             exit_code = extraction_exit_code(report)
+        elif stage == "retarget":
+            exit_code = retarget_exit_code(report)
         else:
             exit_code = report_exit_code(report)
         return IngestionRun(report, report_path, exit_code)

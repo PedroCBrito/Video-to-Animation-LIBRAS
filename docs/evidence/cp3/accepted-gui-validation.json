@@ -1,0 +1,10 @@
+{
+  "frontend": "tkinter",
+  "window": "withdrawn",
+  "trigger": "IngestionApp._start",
+  "status_text": "Animação aprovada e disponível.",
+  "report_path": "E:\\Video-to-Animation-LIBRAS-CP3\\current\\.pipeline\\reports\\retarget-da828e885f054f1c8334c212c5923484.json",
+  "retarget_summary": {
+    "completed": 1
+  }
+}

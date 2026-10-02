@@ -1,0 +1,6 @@
+{
+  "run_blender": {"type": "boolean", "required": true},
+  "make_jupyter_notebook": {"type": "boolean", "required": true},
+  "use_tqdm": {"type": "boolean", "required": true},
+  "flatten_single_camera_data": {"type": "boolean", "required": true}
+}

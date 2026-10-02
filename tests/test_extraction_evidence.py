@@ -7,6 +7,20 @@ from src.extraction.evidence import EvidenceError, generate_evidence
 
 
 class ExtractionEvidenceTests(unittest.TestCase):
+    def test_unchanged_evidence_keeps_its_hash_and_pose_change_invalidates_it(self):
+        from src.common import sha256_file
+        with tempfile.TemporaryDirectory() as folder:
+            recording = self._recording(Path(folder), pose={"frames": [{"landmarks": [{"x": 1, "y": 2}]}]})
+            first = generate_evidence(recording)
+            digest = sha256_file(first.manifest_path)
+            second = generate_evidence(recording)
+            self.assertEqual(sha256_file(second.manifest_path), digest)
+            self.assertEqual(first.manifest, second.manifest)
+            path = recording / "output_data/processed_data/pose.json"
+            path.write_text(json.dumps({"frames": [{"landmarks": [{"x": 10, "y": 20}]}]}))
+            third = generate_evidence(recording)
+            self.assertNotEqual(sha256_file(third.manifest_path), digest)
+
     def _recording(self, root: Path, *, pose: object | None = None, status: str = "completed") -> Path:
         recording = root / "recording"
         recording.mkdir(parents=True)

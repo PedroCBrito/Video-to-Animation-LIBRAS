@@ -1,0 +1,50 @@
+schema_version: "1.0"
+scope: hands_only_prototype
+source:
+  kind: freemocap_ajc27
+  freemocap_version: "1.8.2"
+  # Confirm these names against a real source_skeleton.blend before retargeting.
+  hand_bones:
+    right: hand.R
+    left: hand.L
+  fingers:
+    right:
+      thumb: [thumb.01.R, thumb.02.R, thumb.03.R]
+      index: [palm.01.R, f_index.01.R, f_index.02.R, f_index.03.R]
+      middle: [palm.02.R, f_middle.01.R, f_middle.02.R, f_middle.03.R]
+      ring: [palm.03.R, f_ring.01.R, f_ring.02.R, f_ring.03.R]
+      pinky: [palm.04.R, f_pinky.01.R, f_pinky.02.R, f_pinky.03.R]
+    left:
+      thumb: [thumb.01.L, thumb.02.L, thumb.03.L]
+      index: [palm.01.L, f_index.01.L, f_index.02.L, f_index.03.L]
+      middle: [palm.02.L, f_middle.01.L, f_middle.02.L, f_middle.03.L]
+      ring: [palm.03.L, f_ring.01.L, f_ring.02.L, f_ring.03.L]
+      pinky: [palm.04.L, f_pinky.01.L, f_pinky.02.L, f_pinky.03.L]
+target:
+  avatar_sha256: 0725cf76324fea57d62872351986ca044ba58ae2376f045bde5f927bb34f33d4
+  semantic_reference: avatar-hands-reference.json
+  armature: Armature
+  hand_motion: grouped_root_bones
+  meshes:
+    right: Mao direita
+    left: mao esquerda
+  fingers:
+    right:
+      thumb: [Bone.012, Bone.013, Bone.018]
+      index: [Bone.009, Bone.010, Bone.011, Bone.014]
+      middle: [Bone.006, Bone.007, Bone.008, Bone.015]
+      ring: [Bone, Bone.001, Bone.002, Bone.016]
+      pinky: [Bone.003, Bone.004, Bone.005, Bone.017]
+    left:
+      thumb: [Bone.035, Bone.036, Bone.037]
+      index: [Bone.031, Bone.032, Bone.033, Bone.034]
+      middle: [Bone.027, Bone.028, Bone.029, Bone.030]
+      ring: [Bone.019, Bone.020, Bone.021, Bone.022]
+      pinky: [Bone.023, Bone.024, Bone.025, Bone.026]
+calibration:
+  rest_pose_alignment: per_bone
+  hand_scale: median_non_thumb_rest_chain_ratio
+  coordinate_axes: source_x_to_target_x_source_y_to_target_z_source_z_to_negative_target_y
+  translation_origin: first_frame_hand_midpoint_to_target_hand_midpoint
+  handedness_visual_check: right_hand_is_negative_x_in_source_and_avatar
+  reference_source_sha256: 3e066785b272a053e15243366bc2af659f95888e24343c1af459de1f420f1535

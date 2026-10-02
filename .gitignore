@@ -55,3 +55,9 @@ desktop.ini
 
 # Documentação de planejamento local por etapa
 /docs/step-planning/
+config/tool-paths.local.json
+
+# Runtime caches outside the default output directory
+.pipeline/
+.thumbnails/
+*.tmp

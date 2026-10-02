@@ -12,7 +12,9 @@ from src.ingestion.contracts import InputPaths, SUPPORTED_EXTENSIONS, new_report
 def clip_id(relative_path: str) -> str:
     """Create a stable identifier from the normalized relative path."""
     import hashlib
-    return "clip_" + hashlib.sha256(relative_path.encode("utf-8")).hexdigest()
+    # 128 bits keep collision risk negligible while FreeMoCap's long filenames
+    # remain below the legacy Windows path limit in a normal output directory.
+    return "clip_" + hashlib.sha256(relative_path.encode("utf-8")).hexdigest()[:32]
 
 
 def file_hash(path: Path) -> str:

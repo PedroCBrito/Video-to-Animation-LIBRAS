@@ -1,5 +1,7 @@
 # Plano de desenvolvimento — Vídeos de LIBRAS para animações em lote
 
+Atualização de implementação em 2026-10-02: o **protótipo CP3 das duas mãos** está fechado com o `animation.blend` fornecido. CLI e GUI executam vídeo→captura→retargeting→bake→preview, com reuso verificado e aceite visual explícito do usuário registrado na referência real. Decisões, operação e evidências atuais: [CP3](cp3.md). As metas corporais e de lote abaixo continuam sendo do projeto geral, sem aceite implícito pelo protótipo.
+
 ## 1. Resultado desejado
 
 Automatizar o fluxo manual **vídeo → FreeMoCap → esqueleto animado → personagem no Blender → arquivo de animação**, repetindo-o para todos os vídeos de uma pasta.
@@ -28,7 +30,7 @@ A execução terá dois caminhos de uso: uma tela simples para o uso cotidiano e
 
 FreeMoCap permanece o motor de extração. Reutilizar sua integração Blender para gerar o esqueleto de origem; não construir uma armadura procedural ou um novo estimador como requisito inicial. Se uma operação do caminho manual não tiver interface automatizável, isolar essa operação e avaliar uma adaptação mínima antes de ampliar a arquitetura.
 
-As versões/add-ons ainda precisam ser identificados. O usuário informou que tem uma animação em melhorias e solicitou deixar esse material indefinido por enquanto. O personagem, o rig e a animação de referência permanecem pendentes, sem seleção automática. CP0–CP2 validam até o esqueleto de origem; CP3 e a entrega final dependem da definição posterior do personagem. O lote poderá ser exercitado até a etapa de extração enquanto isso.
+A referência exercitada em CP3 usa Python 3.12.3, FreeMoCap 1.8.2, Blender 5.2.2 LTS e add-on AJC 2026.4.1039. O personagem fornecido foi identificado e mapeado; seu rig anima somente mãos/dedos. Corpo completo exige outro material validado. As Actions manuais existentes não têm vídeo correspondente e são preservadas, sem usá-las como comparação temporal.
 
 ### Base técnica observada, não homologada
 
@@ -252,7 +254,7 @@ A captura monocular do FreeMoCap é uma rota suportada, mas não equivale a tria
 
 **Objetivo:** entregar a primeira animação completa do personagem para um clipe.
 
-**Entrada pendente:** definição do personagem/rig e da animação manual de referência, atualmente em melhorias. Não selecionar um substituto nem considerar essa etapa aprovada enquanto estiverem indefinidos.
+**Entrada do protótipo:** `animation.blend` fornecido, 38 ossos (19 por mão), mapa `config/rig-map-depth.yaml` e saída verificada do CP2. O usuário autorizou fechar somente as duas mãos; tronco e braços dependem de rig completo. CP3.4 compara ao vídeo processado; o usuário concedeu aceite visual explícito à referência em 2026-10-02. [Operação e alterações necessárias ao plano](cp3.md).
 
 1. Registrar o retargeting manual de referência com o material definido e criar perfil único do rig: armature de origem/destino, nomes de ossos, pose de repouso, eixos, escala e correções de orientação.
 2. Validar tronco, ombros, braços, antebraços, punhos, dedos e polegares; cabeça quando disponível.
@@ -382,13 +384,13 @@ Para cada checkpoint, registrar em `docs/step-planning/`: estado, hipótese, alt
 
 O plano compartilhado fica aqui. O diretório local de checkpoints é ignorado pelo Git conforme solicitado; decisões consolidadas necessárias a outros desenvolvedores devem ser promovidas para este documento ou outra página versionada em `docs/`.
 
-O acompanhamento local fica em `docs/step-planning/progresso.md`. Ensaios de lote até `extract` podem avançar enquanto o personagem está pendente; CP5 completo continua exigindo a verificação de retomada do retargeting e da exportação.
+O acompanhamento local fica em `docs/step-planning/progresso.md`. CP5 completo continua exigindo a verificação de retomada avançada e falhas de lote; o reuso de um job do protótipo CP3 não concede esse aceite.
 
-Próximo incremento: homologar manualmente o ambiente real do FreeMoCap e executar uma sessão de referência para validar o caminho CP2. CP1.3–CP1.6 e CP2.0–CP2.6 estão implementados em contratos/testes; CP3 aguardará a definição do personagem/animação de referência.
+Protótipo CP3 fechado: fluxo real, revisão vinculada aos hashes, publicação, bake/reabertura e reuso CLI/GUI validados. Generalização/calibração da captura pertence a CP4; rig corporal, lote avançado e consumidor final não receberam aceite por este resultado.
 
 ## 9. Referências e origem dos dados
 
 - [V-LIBRASIL, portal UFPE](https://libras.cin.ufpe.br/): origem de referência indicada para a coleção. A cópia local e seus metadados ainda serão inspecionados; nenhuma contagem ou FPS foi presumido.
 - Fontes técnicas estão vinculadas nas decisões correspondentes acima.
 - Código de FreeMoCap 1.8.2 instalado localmente: interfaces, layout e defaults registrados na seção 2. Precisam ser reconfirmados se a versão escolhida no CP0 mudar.
-- Código atual: CLI e tela Tkinter de ingestão, preparação, sessão e verificação implementadas; adaptadores de extração e exportação possuem contratos/testes controlados e aguardam homologação real. Evidências dos testes de CP1.0–CP2.6 estão no [guia](ingestion.md).
+- Código atual: serviço compartilhado de CLI/GUI com CP1, CP2 real e protótipo de mãos CP3. Evidências atuais em [CP3](cp3.md); histórico de CP1.0–CP2.6 no [guia](ingestion.md).

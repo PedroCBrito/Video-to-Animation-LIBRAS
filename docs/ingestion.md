@@ -1,8 +1,8 @@
 # Uso da ingestão — CP1.0 a CP1.6
 
-Implementado e verificado em Python 3.12 no Windows. O inventário usa apenas a biblioteca padrão; a inspeção requer FFprobe e FFmpeg. A tela verifica previamente FFmpeg, FFprobe, o pacote Python do FreeMoCap e Blender, mas as etapas atuais ainda não executam FreeMoCap ou Blender.
+Implementado e verificado em Python 3.12 no Windows. Este guia descreve os comandos parciais do CP1/CP2. O inventário usa apenas a biblioteca padrão; a inspeção requer FFprobe e FFmpeg. Desde a retomada de 2026-10-02, a GUI e a CLI sem `--until-stage` executam também FreeMoCap e Blender até a animação das mãos: veja o [guia CP3](cp3.md).
 
-A organização do código separa o serviço de aplicação (`src/application/`), utilitários compartilhados (`src/common/`), etapas de preparação/sessão/verificação e adaptadores externos futuros (`src/integrations/`).
+A organização do código separa o serviço de aplicação (`src/application/`), utilitários compartilhados (`src/common/`), etapas de preparação/sessão/verificação e adaptadores externos (`src/integrations/`).
 
 ## Tela simples (CP1.6)
 
@@ -12,7 +12,7 @@ Para o uso cotidiano, execute:
 python gui.py
 ```
 
-A tela permite selecionar um vídeo ou uma pasta, escolher a pasta de saída, iniciar o fluxo CP1 completo e acompanhar a etapa atual pela barra de progresso. O processamento ocorre em segundo plano para manter a janela responsiva. O botão de cancelamento encerra o fluxo entre etapas seguras, preservando os artefatos publicados; iniciar novamente na mesma saída permite reutilizar preparações e sessões compatíveis.
+A tela permite selecionar um vídeo ou uma pasta, escolher a saída e acompanhar as etapas em segundo plano. Atualmente o fluxo simples inclui CP1→CP2→CP3, com a configuração do protótipo de mãos. O botão de cancelamento preserva os artefatos concluídos; iniciar novamente permite reuso verificado. Para executar somente CP1, use uma etapa explícita na CLI.
 
 ### Preflight antes do processamento
 
@@ -25,7 +25,7 @@ Antes de habilitar o processamento, a tela verifica quatro dependências obrigat
 
 Cada item aparece como `OK` ou `FALTA`, com uma explicação. O botão **Iniciar processamento** fica bloqueado enquanto houver alguma dependência ausente. O botão **Baixar** de cada linha abre a página oficial da ferramenta; a tela não instala programas automaticamente. FFmpeg e FFprobe podem ser encontrados no `PATH` ou pelos caminhos `FFMPEG_BIN` e `FFPROBE_BIN`. Para Blender, a tela verifica `PATH`, `BLENDER_BIN`, instalações comuns do Windows em qualquer unidade disponível e também oferece **Localizar** para selecionar manualmente `blender.exe`. Depois da instalação, use **Atualizar verificações**.
 
-O modo simples usa o perfil CP1 padrão e os caminhos detectados no preflight. A tela mostra o relatório final e pode abrir a pasta de saída. Como FreeMoCap e Blender ainda pertencem aos próximos checkpoints, a tela atualmente prepara, organiza e verifica os artefatos técnicos; ela ainda não gera uma animação 3D final.
+O modo simples usa o perfil de mídia padrão e a configuração compartilhada do CP3 para FreeMoCap, avatar e mapa. A tela pode abrir resultado/preview e registrar a revisão. A saída completa mantém os intermediários em `.pipeline/`; os comandos parciais descritos abaixo mantêm seus diretórios de CP1.
 
 Durante a execução, a seção **Etapas** mostra cada fase como aguardando, em andamento, concluída, concluída com pendências, cancelada ou falha. O status do vídeo atual e o motivo retornado pelo serviço aparecem na mensagem de progresso. Ao terminar com problemas, a tela lista as primeiras falhas/pendências e mantém o relatório completo para diagnóstico.
 
@@ -104,12 +104,12 @@ O comando retorna 0 somente quando todos os vídeos inspecionados têm preparaç
 O comando `verify` executa `inventory`, `inspect`, `prepare` e `session`, depois revalida os artefatos gerados:
 
 ```powershell
-python cli.py --video "./raw_data/Abacaxi_Articulador1.mp4" --output-dir "./output/cp1-real" --until-stage verify --profile "./config/profiles/cp1-media-default.yaml" --ffprobe "C:/ffmpeg/bin/ffprobe.exe" --ffmpeg "C:/ffmpeg/bin/ffmpeg.exe"
+python cli.py --video "./Abacaxi_Articulador1.mp4" --output-dir "./output/cp1-real" --until-stage verify --profile "./config/profiles/cp1-media-default.yaml" --ffprobe "C:/ffmpeg/bin/ffprobe.exe" --ffmpeg "C:/ffmpeg/bin/ffmpeg.exe"
 ```
 
 Por clipe, a verificação confere hashes, existência e layout da sessão, decodificação do preparado e do vídeo que o FreeMoCap encontrará, contagem de frames e duração. O resultado fica em `verification.json`; o relatório consolidado fica em `output/reports/verify-<batch-id>.json`.
 
-O status `pass` significa aprovação técnica dessas verificações. `review` indica divergência ou aviso que precisa de análise; `fail` indica quebra estrutural ou arquivo não decodificável. A etapa não valida qualidade visual, entendimento em LIBRAS ou qualidade linguística. A amostra local `raw_data/Abacaxi_Articulador1.mp4` passou tecnicamente; a proveniência e a cobertura da coleção completa do V-LIBRASIL ainda precisam ser confirmadas.
+O status `pass` significa aprovação técnica dessas verificações. `review` indica divergência ou aviso que precisa de análise; `fail` indica quebra estrutural ou arquivo não decodificável. A etapa não valida entendimento em LIBRAS ou qualidade linguística. A cópia canônica da amostra é `Abacaxi_Articulador1.mp4` na raiz; sua duplicata em `raw_data/` foi removida após conferir o SHA-256. A proveniência e a cobertura da coleção completa do V-LIBRASIL ainda precisam ser confirmadas.
 
 ## Metadados opcionais
 
@@ -150,7 +150,7 @@ Cada execução publica `output/reports/<stage>-<batch-id>.json`, incluindo `inv
 
 Código 0: pelo menos um candidato válido para a etapa e nenhuma ocorrência pendente. Código 2: inspeção/inventário concluído com ocorrências, metadados sem correspondência, ou nenhum candidato válido. Código 1: erro global de caminhos, configuração, ferramentas ou publicação. Argumentos inválidos da CLI usam o código 2 do argparse.
 
-Esses estados pertencem à ingestão e não substituem `pass/review/fail` da qualidade de animação futura. A CLI exige `--until-stage` e executa o serviço compartilhado; `prepare`, `session` e `verify` são as etapas de CP1.3–CP1.5, e `extract` integra o CP2 com perfil FreeMoCap, evidências e esqueleto de origem. A tela atual executa o fluxo simples de CP1.6; ela já reconhece o status da etapa `extract`, enquanto a configuração avançada do backend permanece explícita na CLI. `retarget`, `export`, `--resume`, `--avatar` e `--rig-map` continuam propostos.
+Esses estados pertencem à ingestão e não substituem a revisão visual da animação. `prepare`, `session` e `verify` são as etapas parciais de CP1.3–CP1.5; `extract` integra o CP2 com configuração explícita. `--until-stage` é opcional e o default atual é `retarget`, usando avatar/mapa configurados para CP3. `export` é alias da entrega `.blend`; `--resume` continua não implementado. Consulte o [guia CP3](cp3.md) para revisão, reuso e saída completa.
 
 ## Verificação executada
 
@@ -172,4 +172,4 @@ python -m unittest discover -s tests -v
 
 Se as ferramentas não estiverem no PATH, configure antes `FFMPEG_BIN` e `FFPROBE_BIN` com os executáveis completos. Essas variáveis são usadas pelos testes; a CLI usa PATH ou as opções `--ffmpeg`/`--ffprobe`. Sem ferramentas, quatro testes de integração são ignorados, o que não equivale à validação integral.
 
-Os testes geram e removem apenas suas próprias mídias sintéticas temporárias. A amostra local `raw_data/Abacaxi_Articulador1.mp4` também foi processada pelo fluxo completo e aprovada tecnicamente. Normalização adicional, execução do FreeMoCap e avaliação visual/linguística continuam pendentes.
+Os testes geram e removem apenas suas próprias mídias sintéticas temporárias. A amostra canônica `Abacaxi_Articulador1.mp4` foi processada até o protótipo CP3 e recebeu aceite visual das mãos do usuário. Histórico e validações atuais: [CP3](cp3.md). Calibração geral e avaliação linguística permanecem fora desse aceite.

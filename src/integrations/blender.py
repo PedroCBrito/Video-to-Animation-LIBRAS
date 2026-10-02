@@ -5,10 +5,13 @@ from __future__ import annotations
 import site
 import sys
 import importlib.util
+import importlib.metadata
 from pathlib import Path
 from typing import Sequence
 
 from src.integrations.process import ProcessResult, run_process
+from src.integrations.runtime import backend_environment
+from src.common import sha256_file
 
 
 class BlenderExporter:
@@ -44,6 +47,9 @@ class BlenderExporter:
     def _resolve_export_script(self, custom_script: Path | None) -> Path:
         if custom_script and Path(custom_script).exists():
             return Path(custom_script).resolve()
+        project_script = Path(__file__).resolve().parents[2] / "scripts" / "blender" / "export_cp2_skeleton.py"
+        if project_script.is_file():
+            return project_script
         try:
             spec = importlib.util.find_spec("freemocap")
             if spec is not None and spec.origin:
@@ -54,6 +60,19 @@ class BlenderExporter:
             pass
         local_fallback = Path(__file__).parents[2] / "_internal" / "freemocap" / "core" / "blender" / "helpers" / "run_blender_export.py"
         return local_fallback.resolve() if local_fallback.exists() else Path("run_blender_export.py")
+
+    def identity(self) -> dict:
+        """Bind reuse to the executable, export code and installed integration."""
+        try:
+            addon_version = importlib.metadata.version("ajc27-freemocap-blender-addon")
+        except importlib.metadata.PackageNotFoundError:
+            addon_version = None
+        return {"blender": str(self.blender_executable),
+                "blender_sha256": sha256_file(self.blender_executable) if self.blender_executable.is_file() else None,
+                "script": str(self.export_script),
+                "script_sha256": sha256_file(self.export_script) if self.export_script.is_file() else None,
+                "site_packages": str(self.site_packages_dir), "addon_version": addon_version,
+                "command_template": list(self.command_template) if self.command_template else None}
 
     def build_command(self, session_dir: Path, output_blend_path: Path) -> tuple[str, ...]:
         """Return the argv used for one export, without starting a process."""
@@ -69,7 +88,7 @@ class BlenderExporter:
             except KeyError as error:
                 raise ValueError(f"Unknown Blender command template value: {error.args[0]}") from error
         return (
-            str(self.blender_executable), "--background", "--python", str(self.export_script), "--",
+            str(self.blender_executable), "--background", "--python-exit-code", "1", "--python", str(self.export_script), "--",
             values["site_packages"], values["session_dir"], values["output_blend"],
         )
 
@@ -84,6 +103,7 @@ class BlenderExporter:
         return self._process_runner(
             self.build_command(session_dir, output_blend_path), cwd=Path(session_dir),
             timeout=timeout, cancel_event=cancel_event,
+            env=backend_environment(Path(session_dir).parent / ".runtime"),
         )
 
     def export_animation(self, session_dir: Path, output_blend_path: Path) -> Path:

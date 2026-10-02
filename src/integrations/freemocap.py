@@ -11,6 +11,7 @@ from typing import Any, Mapping
 
 from src.integrations.environment import check_python_package
 from src.integrations.process import ProcessResult, run_process
+from src.integrations.runtime import backend_environment
 
 
 class FreeMoCapAdapterError(ValueError):
@@ -112,4 +113,5 @@ class FreeMoCapAdapter:
         command = self.build_command(session_dir, config_path)
         return run_process(
             command, cwd=self.root, timeout=timeout, cancel_event=cancel_event,
+            env=backend_environment(session_dir.parent / ".runtime"),
         )

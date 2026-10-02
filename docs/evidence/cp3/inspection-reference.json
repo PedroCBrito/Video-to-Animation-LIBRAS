@@ -1,0 +1,19 @@
+{
+  "status": "pass",
+  "reviewer": "Usuário (aceite explícito nesta sessão em 2026-10-02)",
+  "notes": "O usuário aceitou os movimentos das duas mãos para o protótipo em resposta à solicitação de inspeção do preview completo, frames 0–171. Escopo: mãos e dedos; corpo estático. Este aceite não constitui avaliação linguística de LIBRAS.",
+  "intervals": [
+    {
+      "hand": "right",
+      "start": 0,
+      "end": 171,
+      "notes": "Mão direita incluída no aceite visual explícito do usuário para o protótipo."
+    },
+    {
+      "hand": "left",
+      "start": 0,
+      "end": 171,
+      "notes": "Mão esquerda incluída no aceite visual explícito do usuário para o protótipo."
+    }
+  ]
+}

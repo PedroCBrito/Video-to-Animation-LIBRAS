@@ -1,0 +1,13 @@
+schema_version: "1.0"
+name: freemocap-1.8.2-single-camera
+backend:
+  name: freemocap
+  version: "1.8.2"
+  entrypoint: freemocap.core_processes.process_motion_capture_videos.process_recording_headless:process_recording_headless
+parameters:
+  run_blender: false
+  make_jupyter_notebook: false
+  use_tqdm: false
+metadata:
+  session_argument: recording_path
+  purpose: validate_existing_cp1_session_for_cp3_hands
