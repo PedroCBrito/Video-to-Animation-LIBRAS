@@ -100,6 +100,40 @@ class DeliveryTests(unittest.TestCase):
             self.assertFalse((root / "review").exists())
             self.assertFalse((root / "animations").exists())
 
+    def test_review_rejects_changed_or_missing_inputs_without_recording_approval(self):
+        inputs = {"video_path": "video_sha256", "avatar_original_path": "avatar_sha256",
+                  "source_skeleton_path": "source_skeleton_sha256", "rig_map_path": "rig_map_sha256"}
+        for path_key, hash_key in inputs.items():
+            for change in ("modified", "missing"):
+                with self.subTest(input=path_key, change=change), tempfile.TemporaryDirectory() as folder:
+                    root = Path(folder)
+                    work, job, metadata = self.fixture(root)
+                    source = root / "input"
+                    source.write_bytes(b"original input")
+                    job[path_key] = str(source)
+                    job["compatibility"][hash_key] = sha256_file(source)
+                    if path_key == "video_path":
+                        job["video_sha256"] = sha256_file(source)
+                        metadata["visual_review"]["video_sha256"] = job["video_sha256"]
+                        write_json_atomic(work / "visual-review.json", metadata["visual_review"])
+                    metadata.update(job)
+                    write_json_atomic(work / "retarget-input.json", job)
+                    metadata["artifacts"] = artifact_manifest(work)
+                    write_json_atomic(work / "metadata.json", metadata)
+                    original_metadata = (work / "metadata.json").read_bytes()
+                    original_review = (work / "visual-review.json").read_bytes()
+                    if change == "modified":
+                        source.write_bytes(b"changed after rendering")
+                    else:
+                        source.unlink()
+                    with self.assertRaisesRegex(ValueError, "Entrada ausente ou alterada"):
+                        review_animation(work, {"status": "pass", "reviewer": "Test", "notes": "Controlled fixture",
+                                               "intervals": [{"hand": side, "start": 0, "end": 1, "notes": "Checked"}
+                                                             for side in ("right", "left")]})
+                    self.assertEqual((work / "metadata.json").read_bytes(), original_metadata)
+                    self.assertEqual((work / "visual-review.json").read_bytes(), original_review)
+                    self.assertFalse((root / "animations").exists())
+
     def test_corrupt_missing_or_outside_artifacts_block_cache_and_publication(self):
         for case in ("changed", "missing", "outside", "timing", "stale_review"):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as folder:

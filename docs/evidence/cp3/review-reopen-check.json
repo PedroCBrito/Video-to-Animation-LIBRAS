@@ -1,0 +1,12 @@
+{
+  "status": "pass",
+  "file": "animation.blend",
+  "frame_count": 172,
+  "action": "CP3_clip_6fb4328c422f758c2ba237afe20d3552",
+  "curve_count": 380,
+  "keyframe_count": 65360,
+  "max_transform_difference": 0.0,
+  "source_rig_loaded": false,
+  "manual_actions_preserved": 22,
+  "linked_libraries": []
+}

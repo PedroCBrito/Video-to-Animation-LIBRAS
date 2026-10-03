@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from src.animation.delivery import record_visual_review, verified_metadata
-from src.animation.retargeting import publish_animation, publish_review
+from src.animation.retargeting import publish_animation, publish_review, verify_job_inputs
 from src.application.ingestion_service import IngestionRun
 from src.application.workspace import output_lock
 from src.common import utc_now, write_json_atomic
@@ -35,8 +35,11 @@ def review_animation(path: Path, review: dict, *, cancel_event=None) -> Ingestio
         verified_metadata(work)
         if cancel_event is not None and cancel_event.is_set():
             raise InterruptedError("Revisão cancelada.")
+        job = json.loads((work / "retarget-input.json").read_text(encoding="utf-8"))
+        verify_job_inputs(job)
         metadata = record_visual_review(work, review.get("status"), review.get("reviewer", ""),
                                         review.get("notes", ""), review.get("intervals", []))
+        verify_job_inputs(job)
         delivered = publish_animation(work, output, metadata, cancel_event=cancel_event)
         destination = delivered or publish_review(work, output, metadata, cancel_event=cancel_event)
         result = {"status": metadata["status"], "reason": metadata["visual_review"]["notes"],

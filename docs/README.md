@@ -5,6 +5,7 @@
 - [Planejamento vigente](planning.md): escopo, arquitetura, contratos e checkpoints CP0–CP7. Esta é a referência compartilhada para implementação.
 - [Uso da ingestão](ingestion.md): comandos e tela Tkinter de CP1.0–CP1.6, preparação, sessões, relatórios, metadados e testes.
 - [Protótipo CP3](cp3.md): vídeo até animação das duas mãos, CLI/GUI, organização da saída, revisão e validações reais.
+- [Revisão do CP3 e entrada no CP4](cp3-review-2026-10-03.md): critérios, correção do serviço de revisão e validação posterior ao commit.
 - [Revisão antes do CP4](repository-cleanup.md): limpeza dos ensaios antigos, arquivos preservados e evidências compartilhadas.
 - [Estado anterior do CP3](relatorio-cp3-estado-2026-10-02.md): diagnóstico preservado anterior à implementação desta retomada.
 - [README do projeto](../README.md) e [versão em português](../README_PT.md): apresentação e distinção entre recursos existentes e propostos.

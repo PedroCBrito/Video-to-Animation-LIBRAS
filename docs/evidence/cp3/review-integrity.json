@@ -1,0 +1,14 @@
+{
+  "status": "pass",
+  "approved_bundle": "E:\\Video-to-Animation-LIBRAS-CP3\\current\\animations\\clip_6fb4328c422f758c2ba237afe20d3552\\cp3_221ff8a4a392ce319bcf",
+  "artifacts_verified": 353,
+  "current_code_matches_accepted_job": true,
+  "cp2_link_verified": true,
+  "source_arrays_verified": 5,
+  "frames": [
+    0,
+    171
+  ],
+  "original_actions": 22,
+  "linguistic_quality_validated": false
+}

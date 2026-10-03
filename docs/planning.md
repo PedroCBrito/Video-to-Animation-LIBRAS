@@ -234,7 +234,7 @@ FFmpeg regulariza FPS descartando ou duplicando frames; preservar duração e ra
 
 **Detalhamento de implementação:** [CP2 — Extração automatizada com FreeMoCap](step-planning/poc-2-freemocap.md).
 
-**Progresso:** CP2.0–CP2.6 foram implementados com contratos e testes controlados. O adaptador não importa FreeMoCap durante a preparação, a etapa de evidências gera métricas/overlays SVG, o exportador Blender publica artefatos atomicamente e o serviço/CLI registram estados por sessão. A execução real do FreeMoCap, a validação visual da pose e a reabertura do esqueleto em Blender continuam pendentes.
+**Progresso:** CP2.0–CP2.6 foram implementados com contratos e testes controlados. O adaptador não importa FreeMoCap durante a preparação, a etapa de evidências gera métricas/overlays SVG, o exportador Blender publica artefatos atomicamente e o serviço/CLI registram estados por sessão. A extração real e o esqueleto foram exercitados no fluxo do protótipo CP3 aceito; generalização e calibração continuam pendentes. Veja o [guia CP3](cp3.md) e a [revisão de entrada no CP4](cp3-review-2026-10-03.md).
 
 1. Fixar o ambiente escolhido no CP0 e testar imports/assinaturas.
 2. Executar FreeMoCap por adaptador, preferencialmente em processo isolado.

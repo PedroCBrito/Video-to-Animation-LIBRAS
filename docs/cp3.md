@@ -1,6 +1,6 @@
 # CP3 — Protótipo das duas mãos
 
-Atualizado em 2026-10-02. Escopo autorizado pelo usuário: receber um vídeo e gerar uma animação das duas mãos no rig original de `animation.blend`, com preview, bake, reabertura e revisão. Há geometria corporal estática; o avatar não possui rig de tronco/braços nem controle dedicado de palma/punho. A avaliação linguística e o CP3 corporal completo não estão aprovados por este protótipo.
+Atualizado em 2026-10-03. Escopo autorizado pelo usuário: receber um vídeo e gerar uma animação das duas mãos no rig original de `animation.blend`, com preview, bake, reabertura e revisão. Há geometria corporal estática; o avatar não possui rig de tronco/braços nem controle dedicado de palma/punho. A avaliação linguística e o CP3 corporal completo não estão aprovados por este protótipo.
 
 ## Estado e etapas de implementação
 
@@ -12,6 +12,8 @@ Atualizado em 2026-10-02. Escopo autorizado pelo usuário: receber um vídeo e g
 | E4 — CLI/GUI | Fluxo completo por padrão, preview compacto, ações de revisão e caminhos de ferramentas compartilhados. Regressão final: 129 testes, 0 falhas, 0 erros, 0 skips. Ensaio real e repetições pela GUI/CLI no E: concluídos; aprovação registrada e publicada. |
 
 **Protótipo fechado:** em 2026-10-02 o usuário respondeu “Aceitar os movimentos das duas mãos para o protótipo” à solicitação de inspeção do preview completo (frames 0–171, ambas as mãos). Esse aceite foi registrado pela CLI, vinculado aos hashes, e o mesmo pacote foi promovido para `animations/`, sem recaptura ou rebake. Não houve avaliação linguística nem aprovação de corpo completo, lote heterogêneo ou calibração geral.
+
+**Revisão posterior ao commit:** [auditoria do CP3](cp3-review-2026-10-03.md) conferiu o pacote real e a reabertura independente, corrigiu a verificação de entradas antes da promoção por revisão e passou em 130 testes. O início do CP4 faz sentido no escopo de mãos, mantendo generalização e calibração como trabalho pendente.
 
 O [relatório anterior](relatorio-cp3-estado-2026-10-02.md) foi preservado como histórico. O detalhamento local está em `docs/step-planning/poc-3-retargeting.md`, ignorado pelo Git; este guia registra as decisões compartilhadas.
 

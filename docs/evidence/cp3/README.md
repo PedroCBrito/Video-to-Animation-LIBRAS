@@ -9,6 +9,7 @@ Snapshots preservados em 2026-10-02 durante a revisão anterior ao commit. Os JS
 - `accepted-gui-validation.json`, `accepted-reuse-cli.json`, `accepted-reuse-gui.json`: execução e reuso da saída final no E:.
 - `avatar-hands-front.png`, `avatar-hands-back.png`: vistas usadas na identificação anatômica das mãos do avatar.
 - `cleanup-tests.json` e `cleanup-tests.txt`: regressão após a limpeza do repositório.
+- `review-tests.json`, `review-tests.txt`, `review-integrity.json`, `review-reopen-check.json`, `review-preview.json`: validação posterior ao commit, incluindo a proteção de promoção contra entradas alteradas e a reabertura da animação real.
 
 A revisão conferiu os hashes de `animation.blend` e `preview.mp4` do pacote aprovado contra a metadata. O pacote e sua área interna permanecem em `E:/Video-to-Animation-LIBRAS-CP3/current/`. Esta pasta contém evidências; não contém a animação nem o cache necessário para reprocessar.
 
